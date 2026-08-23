@@ -87,6 +87,18 @@
 - RGB座標軸を車体の後ではなく手前に描き、デバッグ表示の視認性を改善。
 - Ubuntu 24.04上のelf2x68k環境でリビルドし、`src/human.sys`と`dist/wdrfrace.xdf`の生成に成功。
 
+### ダーティ矩形消去の比較実装（同日）
+
+- 前フレームの車体とXYZ軸の投影点から、1ピクセル余白付きの最小スクリーンAABBを計算。
+- 従来の黒線7本による消去を、AABBに対する1回の`_iocs_fill()`へ置き換える実験実装を追加。
+- `make DIRTY_RECT=1`をAABB消去、`make DIRTY_RECT=0`を従来の黒線消去として`#ifdef`で切り替え可能にした。
+- 設定変更時は`make clean`後に再ビルドし、300フレーム平均FPSで比較する。
+- AABB方式はIOCS呼び出し回数を削減する一方、矩形内部まで書き込むため、形状と角度によってメモリアクセス量が増える点を評価対象とする。
+- Ubuntu 24.04上のelf2x68k環境で`DIRTY_RECT=1`をリビルドし、`dist/wdrfrace.xdf`を更新。
+- `DIRTY_RECT=1`版で約30.30 FPSを確認し、従来方式との差は現時点では判別しにくい状態。
+- 既存の`dist/wdrfrace.xdf`をAABB消去版として保持したまま、`DIRTY_RECT=0`の黒線消去版を`dist/wdrline.xdf`として追加生成。
+- `wdrfrace.xdf`と`wdrline.xdf`を同一条件で実行し、300フレーム平均FPSを直接比較可能にした。
+
 ### OpenGL準拠座標系とデバッグ軸（同日）
 
 - 座標系を右が+X、上が+Y、カメラ前方が-ZのOpenGL準拠右手座標系へ変更。

@@ -183,6 +183,43 @@ static void draw_debug_axes(const Vec2s *pt, const uint8_t *visible) {
   if (visible[3]) draw_line(pt[0].x, pt[0].y, pt[3].x, pt[3].y, COLOR_BLUE);
 }
 
+#ifdef USE_DIRTY_RECT_CLEAR
+static void clear_previous_frame(const Vec2s *car, const uint8_t *car_visible,
+                                 const Vec2s *axis,
+                                 const uint8_t *axis_visible) {
+  int min_x = 32767;
+  int min_y = 32767;
+  int max_x = -32768;
+  int max_y = -32768;
+
+  for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
+    if (!car_visible[i]) continue;
+    if (car[i].x < min_x) min_x = car[i].x;
+    if (car[i].y < min_y) min_y = car[i].y;
+    if (car[i].x > max_x) max_x = car[i].x;
+    if (car[i].y > max_y) max_y = car[i].y;
+  }
+  for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
+    if (!axis_visible[i]) continue;
+    if (axis[i].x < min_x) min_x = axis[i].x;
+    if (axis[i].y < min_y) min_y = axis[i].y;
+    if (axis[i].x > max_x) max_x = axis[i].x;
+    if (axis[i].y > max_y) max_y = axis[i].y;
+  }
+
+  if (max_x < 0 || max_y < 0 || min_x >= FIELD_W || min_y >= FIELD_H) return;
+  if (min_x > 0) --min_x;
+  if (min_y > 0) --min_y;
+  if (max_x < FIELD_W - 1) ++max_x;
+  if (max_y < FIELD_H - 1) ++max_y;
+  if (min_x < 0) min_x = 0;
+  if (min_y < 0) min_y = 0;
+  if (max_x >= FIELD_W) max_x = FIELD_W - 1;
+  if (max_y >= FIELD_H) max_y = FIELD_H - 1;
+
+  draw_fill_block(min_x, min_y, max_x, max_y, COLOR_BLACK);
+}
+#else
 static void erase_debug_axes(const Vec2s *pt, const uint8_t *visible) {
   if (!visible[0]) return;
   for (int i = 1; i < DEBUG_AXIS_POINT_COUNT; ++i) {
@@ -191,6 +228,7 @@ static void erase_debug_axes(const Vec2s *pt, const uint8_t *visible) {
     }
   }
 }
+#endif
 
 static const uint8_t *glyph_for_char(char c) {
   if (c >= '0' && c <= '9') return kDigits4x5[c - '0'];
@@ -388,8 +426,13 @@ int main(void) {
     }
 
     if (state.have_prev) {
+#ifdef USE_DIRTY_RECT_CLEAR
+      clear_previous_frame(state.prev, state.visible_prev,
+                           debug_axis_prev, debug_axis_visible_prev);
+#else
       draw_wire(state.prev, state.visible_prev, COLOR_BLACK);
       erase_debug_axes(debug_axis_prev, debug_axis_visible_prev);
+#endif
     }
     draw_wire(state.next, state.visible_next, COLOR_WHITE);
     draw_debug_axes(debug_axis_points, debug_axis_visible);

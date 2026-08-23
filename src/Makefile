@@ -9,6 +9,11 @@ LD = $(CROSS)g++
 CFLAGS = -m68000 -O2 -g -specs=x68knodos.specs
 LDFLAGS = -Ttext=0x6800 -s -specs=x68knodos.specs
 
+DIRTY_RECT ?= 1
+ifeq ($(DIRTY_RECT),1)
+CFLAGS += -DUSE_DIRTY_RECT_CLEAR
+endif
+
 PYTHON ?= python3
 CURL ?= curl
 
