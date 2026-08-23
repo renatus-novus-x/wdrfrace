@@ -6,8 +6,12 @@ CC = $(CROSS)g++
 AS = $(CROSS)as
 LD = $(CROSS)g++
 
-CFLAGS = -m68000 -O2 -g -specs=x68knodos.specs
+CFLAGS = -m68000 -O2 -g -MMD -MP -specs=x68knodos.specs
 LDFLAGS = -Ttext=0x6800 -s -specs=x68knodos.specs
+
+SOURCES := $(wildcard *.cpp)
+OBJECTS := $(SOURCES:.cpp=.o)
+DEPS := $(OBJECTS:.o=.d)
 
 PYTHON ?= python3
 CURL ?= curl
@@ -35,7 +39,7 @@ check-tools:
 		exit 1; \
 	}
 
-$(TARGET): main.o
+$(TARGET): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^
 	
 %.o: %.cpp
@@ -60,10 +64,12 @@ check-xdf: $(XDF) $(XDFTOOL)
 	$(PYTHON) $(XDFTOOL) t $(XDF)
 
 clean:
-	-rm -f *.o *.elf* $(TARGET) $(XDF)
+	-rm -f *.o *.d *.elf* $(TARGET) $(XDF)
 	-rm -rf $(XDF_ROOT)
 
 distclean: clean
 	-rm -rf $(BUILD_DIR)
+
+-include $(DEPS)
 
 

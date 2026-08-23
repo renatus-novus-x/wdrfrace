@@ -117,6 +117,24 @@
 - `USE_DIRTY_RECT_CLEAR`による条件分岐とAABB計算処理を削除し、黒線7本による消去へ一本化。
 - Makefileから`DIRTY_RECT`切り替え設定を削除。
 
+### Application更新・描画分離とソース分割（同日）
+
+- Application APIを`initialize()`、`update()`、`render()`、`finalize()`へ整理。
+- GameModeの仮想関数を`update()`と`render()`へ分離し、状態更新を止めても描画を継続できる構造へ変更。
+- Applicationへポーズ状態と`set_paused()`を追加し、ポーズ中はGameModeの`update()`を呼ばず`render()`だけを継続可能にした。
+- `Application`を`app.h/.cpp`、`GameMode`を`gmode.h/.cpp`、`GameModeTest`を`gmtest.h/.cpp`へ分割。
+- `main.cpp`はApplicationの初期化、更新・描画ループ、終了だけを行う構成へ簡略化。
+- elf2x68k付属ヘッダーと同じ`#ifndef`/`#define`形式のinclude guardを各ヘッダーへ追加。
+- Makefileで`$(wildcard *.cpp)`から全C++ソースを自動収集し、`-MMD -MP`によるヘッダー依存関係の自動追跡を追加。
+
+### デバッグ表示切り替え（同日）
+
+- X68000のDキー（スキャンコード`0x20`）で、FPS HUDとRGBのXYZ座標軸をまとめて表示・非表示できるトグルを追加。
+- 小文字`d`と大文字`D`は同じ物理キーとして扱い、押し続けても連続反転しない押下エッジ判定を実装。
+- 非表示へ切り替えたフレームで旧XYZ軸とFPS領域を黒く消去し、以降の軸投影と描画を省略。
+- 再表示時は現在のXYZ軸と最新FPS値を即時描画。
+- Ubuntu 24.04上のelf2x68k環境でリビルドし、`dist/wdrfrace.xdf`を更新。
+
 ### OpenGL準拠座標系とデバッグ軸（同日）
 
 - 座標系を右が+X、上が+Y、カメラ前方が-ZのOpenGL準拠右手座標系へ変更。
