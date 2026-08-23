@@ -1,4 +1,3 @@
-#include <math.h>
 #include <stdint.h>
 #include <x68k/iocs.h>
 
@@ -8,6 +7,11 @@
 #define KEY_ESC 0x01
 
 #define FPS_WINDOW_FRAMES 300
+#define CAR_VERTEX_COUNT 4
+#define TRIG_TABLE_SIZE 256
+#define TRIG_TABLE_MASK (TRIG_TABLE_SIZE - 1)
+#define TRIG_QUARTER (TRIG_TABLE_SIZE / 4)
+#define TRIG_INDEX_SCALE 40.74366543f
 #define HUD_X 8
 #define HUD_Y 8
 #define HUD_W 170
@@ -25,6 +29,16 @@
 
 #define COLOR_BLACK 0x0000
 #define COLOR_WHITE 0xffff
+#define COLOR_RED 0x07c1
+#define COLOR_GREEN 0xf801
+#define COLOR_BLUE 0x003f
+
+#define CAMERA_RADIUS 12.0f
+#define CAMERA_HEIGHT 5.0f
+#define CAMERA_DISTANCE 13.0f
+#define CAMERA_RADIUS_NORMALIZED 0.923076923f
+#define CAMERA_HEIGHT_NORMALIZED 0.384615385f
+#define DEBUG_AXIS_POINT_COUNT 4
 
 typedef struct {
   float x;
@@ -45,13 +59,13 @@ typedef struct {
 typedef struct {
   int frame;
   iocs_color_t old_mode;
-  Vec3f base[12];
-  Vec3f curr[12];
-  Vec2s prev[12];
-  Vec2s next[12];
-  uint8_t visible_prev[12];
-  uint8_t visible_next[12];
-  float angle;
+  Vec3f base[CAR_VERTEX_COUNT];
+  Vec3f curr[CAR_VERTEX_COUNT];
+  Vec2s prev[CAR_VERTEX_COUNT];
+  Vec2s next[CAR_VERTEX_COUNT];
+  uint8_t visible_prev[CAR_VERTEX_COUNT];
+  uint8_t visible_next[CAR_VERTEX_COUNT];
+  float camera_angle;
   int have_prev;
 
   struct iocs_time fps_start;
@@ -61,17 +75,22 @@ typedef struct {
 } GameState;
 
 static const Vec3f kCarModel[] = {
-  {-1.4f, -0.45f, -2.0f}, {1.4f, -0.45f, -2.0f}, {1.4f, 0.05f, -2.0f},
-  {-1.4f, 0.05f, -2.0f}, {-1.0f, -0.45f, 2.0f},  {1.0f, -0.45f, 2.0f},
-  {1.0f, 0.05f, 2.0f},   {-1.0f, 0.05f, 2.0f},  {-0.9f, 0.65f, -1.1f},
-  {0.9f, 0.65f, -1.1f},  {0.9f, 0.90f, 1.1f},   {-0.9f, 0.90f, 1.1f},
+  {-1.8f, -0.65f, 0.0f}, {1.8f, -0.65f, 0.0f},
+  {1.35f, 0.65f, 0.0f}, {-1.35f, 0.65f, 0.0f},
 };
 
 static const Edge kEdges[] = {
-  {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4},
-  {0, 4}, {1, 5}, {2, 6}, {3, 7}, {8, 9}, {9, 10}, {10, 11}, {11, 8},
-  {2, 8}, {3, 11}, {6, 10}, {7, 11},
+  {0, 1}, {1, 2}, {2, 3}, {3, 0},
 };
+
+static const Vec3f kDebugAxes[DEBUG_AXIS_POINT_COUNT] = {
+  {0.0f, 0.0f, 0.0f},
+  {1.0f, 0.0f, 0.0f},
+  {0.0f, 1.0f, 0.0f},
+  {0.0f, 0.0f, 1.0f},
+};
+
+static float g_sin_table[TRIG_TABLE_SIZE];
 
 // 4x5 bitmap font (bit 3..0)
 static const uint8_t kDigits4x5[10][5] = {
@@ -90,6 +109,24 @@ static const uint8_t kDigits4x5[10][5] = {
 static const uint8_t kGlyphF[5] = {0x0F, 0x08, 0x0C, 0x08, 0x08};
 static const uint8_t kGlyphP[5] = {0x0E, 0x0A, 0x0E, 0x08, 0x08};
 static const uint8_t kGlyphS[5] = {0x07, 0x08, 0x0E, 0x01, 0x0E};
+
+static void init_trig_table(void) {
+  const float step_sin = 0.024541229f;
+  const float step_cos = 0.999698819f;
+  float s = 0.0f;
+  float c = 1.0f;
+
+  for (int i = 0; i < TRIG_TABLE_SIZE; ++i) {
+    g_sin_table[i] = s;
+    float next_s = s * step_cos + c * step_sin;
+    c = c * step_cos - s * step_sin;
+    s = next_s;
+  }
+}
+
+static inline int trig_index(float angle) {
+  return ((int)(angle * TRIG_INDEX_SCALE)) & TRIG_TABLE_MASK;
+}
 
 static inline long ontime_diff_cs(struct iocs_time start, struct iocs_time end) {
   return ((long)end.day - (long)start.day) * CENTISEC_PER_DAY
@@ -136,6 +173,22 @@ static void draw_wire(const Vec2s *pt, const uint8_t *visible, iocs_color_t colo
     const Edge e = kEdges[i];
     if (!visible[e.a] || !visible[e.b]) continue;
     draw_line(pt[e.a].x, pt[e.a].y, pt[e.b].x, pt[e.b].y, color);
+  }
+}
+
+static void draw_debug_axes(const Vec2s *pt, const uint8_t *visible) {
+  if (!visible[0]) return;
+  if (visible[1]) draw_line(pt[0].x, pt[0].y, pt[1].x, pt[1].y, COLOR_RED);
+  if (visible[2]) draw_line(pt[0].x, pt[0].y, pt[2].x, pt[2].y, COLOR_GREEN);
+  if (visible[3]) draw_line(pt[0].x, pt[0].y, pt[3].x, pt[3].y, COLOR_BLUE);
+}
+
+static void erase_debug_axes(const Vec2s *pt, const uint8_t *visible) {
+  if (!visible[0]) return;
+  for (int i = 1; i < DEBUG_AXIS_POINT_COUNT; ++i) {
+    if (visible[i]) {
+      draw_line(pt[0].x, pt[0].y, pt[i].x, pt[i].y, COLOR_BLACK);
+    }
   }
 }
 
@@ -231,16 +284,19 @@ static int update_fps(GameState *state) {
   return 1;
 }
 
-static int project(const Vec3f *in, float cx, float sx, float cy, float sy,
-                   Vec2s *out) {
-  float x = in->x * cy + in->z * sy;
-  float z = -in->x * sy + in->z * cy;
-  float y = in->y * cx - z * sx;
-  z = in->y * sx + z * cx + 12.0f;
+static int project_world(const Vec3f *in, float cz, float sz, Vec2s *out) {
+  float x = in->x * cz - in->z * sz;
+  float y = -in->x * sz * CAMERA_HEIGHT_NORMALIZED
+          + in->y * CAMERA_RADIUS_NORMALIZED
+          - in->z * cz * CAMERA_HEIGHT_NORMALIZED;
+  float z = in->x * sz * CAMERA_RADIUS_NORMALIZED
+          + in->y * CAMERA_HEIGHT_NORMALIZED
+          + in->z * cz * CAMERA_RADIUS_NORMALIZED
+          - CAMERA_DISTANCE;
 
-  if (z < 1.0f) return 0;
+  if (z > -1.0f) return 0;
 
-  float p = 320.0f / z;
+  float p = 320.0f / -z;
   out->x = (int16_t)(FIELD_W * 0.5f + x * p);
   out->y = (int16_t)(FIELD_H * 0.5f - y * p);
   return 1;
@@ -273,14 +329,15 @@ static int key_down(int scan) {
 }
 
 static void init_state(GameState *s) {
-  s->angle = 0.0f;
+  init_trig_table();
+  s->camera_angle = 0.0f;
   s->frame = 0;
   s->have_prev = 0;
   s->fps_count = 0;
   s->fps_x100 = 0;
   s->fps_ready = 0;
   s->old_mode = _iocs_crtmod(-1);
-  for (int i = 0; i < 12; ++i) s->base[i] = kCarModel[i];
+  for (int i = 0; i < CAR_VERTEX_COUNT; ++i) s->base[i] = kCarModel[i];
   _iocs_crtmod(12);
   _iocs_g_clr_on();
   _iocs_b_curoff();
@@ -293,6 +350,10 @@ static void shutdown(iocs_color_t old_mode) {
 
 int main(void) {
   GameState state;
+  Vec2s debug_axis_points[DEBUG_AXIS_POINT_COUNT];
+  Vec2s debug_axis_prev[DEBUG_AXIS_POINT_COUNT];
+  uint8_t debug_axis_visible[DEBUG_AXIS_POINT_COUNT];
+  uint8_t debug_axis_visible_prev[DEBUG_AXIS_POINT_COUNT];
   init_state(&state);
 
   if (set_60hz() != 0) {
@@ -309,34 +370,45 @@ int main(void) {
 
     int fps_updated = update_fps(&state);
 
-    float ax = state.angle * 0.7f;
-    float ay = state.angle;
-    float cx = cosf(ax);
-    float sx = sinf(ax);
-    float cy = cosf(ay);
-    float sy = sinf(ay);
+    int angle_index = trig_index(state.camera_angle);
+    float sz = g_sin_table[angle_index];
+    float cz =
+        g_sin_table[(angle_index + TRIG_QUARTER) & TRIG_TABLE_MASK];
 
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
+      debug_axis_visible[i] = (uint8_t)project_world(
+          &kDebugAxes[i], cz, sz, &debug_axis_points[i]);
+    }
+
+    for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
       Vec3f p = state.base[i];
       state.curr[i] = p;
       state.visible_next[i] =
-          (uint8_t)project(&p, cx, sx, cy, sy, &state.next[i]);
+          (uint8_t)project_world(&p, cz, sz, &state.next[i]);
     }
 
     if (state.have_prev) {
       draw_wire(state.prev, state.visible_prev, COLOR_BLACK);
+      erase_debug_axes(debug_axis_prev, debug_axis_visible_prev);
     }
     draw_wire(state.next, state.visible_next, COLOR_WHITE);
+    draw_debug_axes(debug_axis_points, debug_axis_visible);
     if (fps_updated) draw_fps_hud(&state);
 
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
       state.prev[i] = state.next[i];
       state.visible_prev[i] = state.visible_next[i];
     }
+    for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
+      debug_axis_prev[i] = debug_axis_points[i];
+      debug_axis_visible_prev[i] = debug_axis_visible[i];
+    }
     state.have_prev = 1;
 
-    state.angle += 0.015f;
-    if (state.angle >= 6.2831853f) state.angle -= 6.2831853f;
+    state.camera_angle += 0.015f;
+    if (state.camera_angle >= 6.2831853f) {
+      state.camera_angle -= 6.2831853f;
+    }
     ++state.frame;
   }
 
