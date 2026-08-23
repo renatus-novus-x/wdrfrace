@@ -69,8 +69,8 @@ static const Vec3f kCarModel[] = {
 
 static const Edge kEdges[] = {
   {0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4},
-  {0, 4}, {1, 5}, {2, 6}, {3, 7}, {0, 3}, {1, 2}, {4, 7}, {5, 6},
-  {8, 9}, {9, 10}, {10, 11}, {11, 8}, {2, 8}, {3, 11}, {6, 10}, {7, 11},
+  {0, 4}, {1, 5}, {2, 6}, {3, 7}, {8, 9}, {9, 10}, {10, 11}, {11, 8},
+  {2, 8}, {3, 11}, {6, 10}, {7, 11},
 };
 
 // 4x5 bitmap font (bit 3..0)
@@ -120,36 +120,14 @@ static void draw_pixel(int x, int y, iocs_color_t color) {
 }
 
 static void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
-  int dx = x1 - x0;
-  int sx = 1;
-  int dy = y1 - y0;
-  int sy = 1;
-
-  if (dx < 0) {
-    dx = -dx;
-    sx = -1;
-  }
-  if (dy < 0) {
-    dy = -dy;
-    sy = -1;
-  }
-
-  int err = ((dx > dy) ? dx : -dy) / 2;
-  int e2;
-
-  while (1) {
-    draw_pixel(x0, y0, color);
-    if (x0 == x1 && y0 == y1) break;
-    e2 = err;
-    if (e2 > -dx) {
-      err -= dy;
-      x0 += sx;
-    }
-    if (e2 < dy) {
-      err += dx;
-      y0 += sy;
-    }
-  }
+  struct iocs_lineptr line;
+  line.x1 = (short)x0;
+  line.y1 = (short)y0;
+  line.x2 = (short)x1;
+  line.y2 = (short)y1;
+  line.color = color;
+  line.linestyle = 0xffff;
+  _iocs_line(&line);
 }
 
 static void draw_wire(const Vec2s *pt, const uint8_t *visible, iocs_color_t color) {
@@ -235,13 +213,13 @@ static void draw_fps_hud(const GameState *state) {
   draw_glyph(x + 12, HUD_Y, (char)('0' + (f % 10)), COLOR_WHITE);
 }
 
-static void update_fps(GameState *state) {
+static int update_fps(GameState *state) {
   if (state->fps_count == 0) {
     state->fps_start = _iocs_ontime();
   }
 
   ++state->fps_count;
-  if (state->fps_count < FPS_WINDOW_FRAMES) return;
+  if (state->fps_count < FPS_WINDOW_FRAMES) return 0;
 
   struct iocs_time now = _iocs_ontime();
   long dt_cs = ontime_diff_cs(state->fps_start, now);
@@ -250,14 +228,11 @@ static void update_fps(GameState *state) {
     state->fps_ready = 1;
   }
   state->fps_count = 0;
+  return 1;
 }
 
-static int project(const Vec3f *in, float ax, float ay, Vec2s *out) {
-  float cy = cosf(ay);
-  float sy = sinf(ay);
-  float cx = cosf(ax);
-  float sx = sinf(ax);
-
+static int project(const Vec3f *in, float cx, float sx, float cy, float sy,
+                   Vec2s *out) {
   float x = in->x * cy + in->z * sy;
   float z = -in->x * sy + in->z * cy;
   float y = in->y * cx - z * sx;
@@ -326,27 +301,33 @@ int main(void) {
   }
 
   draw_fill_block(0, 0, FIELD_W - 1, FIELD_H - 1, COLOR_BLACK);
+  draw_fps_hud(&state);
 
   for (;;) {
     if (wait_vdisp() != 0) break;
     if (key_down(KEY_ESC)) break;
 
-    update_fps(&state);
+    int fps_updated = update_fps(&state);
 
     float ax = state.angle * 0.7f;
     float ay = state.angle;
+    float cx = cosf(ax);
+    float sx = sinf(ax);
+    float cy = cosf(ay);
+    float sy = sinf(ay);
 
     for (int i = 0; i < 12; ++i) {
       Vec3f p = state.base[i];
       state.curr[i] = p;
-      state.visible_next[i] = (uint8_t)project(&p, ax, ay, &state.next[i]);
+      state.visible_next[i] =
+          (uint8_t)project(&p, cx, sx, cy, sy, &state.next[i]);
     }
 
     if (state.have_prev) {
       draw_wire(state.prev, state.visible_prev, COLOR_BLACK);
     }
     draw_wire(state.next, state.visible_next, COLOR_WHITE);
-    draw_fps_hud(&state);
+    if (fps_updated) draw_fps_hud(&state);
 
     for (int i = 0; i < 12; ++i) {
       state.prev[i] = state.next[i];
