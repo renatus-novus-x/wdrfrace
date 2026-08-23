@@ -1,0 +1,13 @@
+# elf2x68k build outputs
+/src/*.o
+/src/*.elf*
+/src/human.sys
+/src/build/
+/doc/.tmp*
+
+# Editor and OS files
+.vscode/
+*.swp
+*~
+Thumbs.db
+.DS_Store
