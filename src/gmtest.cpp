@@ -23,7 +23,7 @@ const float CAMERA_DISTANCE = 13.0f;
 const float CAMERA_RADIUS_NORMALIZED = 0.923076923f;
 const float CAMERA_HEIGHT_NORMALIZED = 0.384615385f;
 const float TRIG_INDEX_SCALE = 40.74366543f;
-const float TWO_PI = 6.2831853f;
+const float CAMERA_STEP_PER_UPDATE = 0.045f;
 
 const uint8_t kDigits4x5[10][5] = {
   {0x0E, 0x0A, 0x0A, 0x0A, 0x0E},
@@ -294,11 +294,17 @@ GameModeId GameModeTest::update() {
   }
   debug_toggle_down_ = debug_toggle;
 
-  fps_updated_ = update_fps();
+  state_.camera_angle += CAMERA_STEP_PER_UPDATE;
+  ++state_.frame;
+  return GAME_MODE_TEST;
+}
+
+void GameModeTest::render() {
   int angle_index = trig_index(state_.camera_angle);
   float sz = sin_table_[angle_index];
   float cz = sin_table_[(angle_index + TRIG_TABLE_SIZE / 4)
                         & (TRIG_TABLE_SIZE - 1)];
+
   if (debug_visible_) {
     project_debug_axis(cz, sz);
   } else {
@@ -310,13 +316,8 @@ GameModeId GameModeTest::update() {
     state_.visible_next[i] = (uint8_t)project_world(
         state_.base[i], cz, sz, state_.next[i]);
   }
-  state_.camera_angle += 0.015f;
-  if (state_.camera_angle >= TWO_PI) state_.camera_angle -= TWO_PI;
-  ++state_.frame;
-  return GAME_MODE_TEST;
-}
 
-void GameModeTest::render() {
+  fps_updated_ = update_fps();
   erase_previous_frame();
   draw_wire(state_.next, state_.visible_next, COLOR_WHITE);
   if (debug_visible_) draw_debug_axis();

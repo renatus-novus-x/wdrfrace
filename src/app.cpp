@@ -10,6 +10,8 @@ const int FIELD_H = 480;
 const int WAIT_VDISP_TIMEOUT_CS = 100;
 const long CENTISEC_PER_DAY = 8640000L;
 const uint8_t GPIP_VDISP = 0x10;
+const uint16_t MAX_FRAME_CS = 10;
+const uint16_t FIXED_FRAME_STEP_CS = 5;
 
 #define CRTC_R04 ((void *)0x00E80008UL)
 #define CRTC_R05 ((void *)0x00E8000AUL)
@@ -71,6 +73,8 @@ int Application::initialize() {
   current_mode_ = 0;
   running_ = 0;
   paused_ = 0;
+  frame_accumulator_cs_ = FIXED_FRAME_STEP_CS;
+  render_due_ = 0;
   old_mode_ = _iocs_crtmod(-1);
   _iocs_crtmod(12);
   _iocs_g_clr_on();
@@ -85,6 +89,7 @@ int Application::initialize() {
     finalize();
     return 0;
   }
+  previous_time_ = _iocs_ontime();
   running_ = 1;
   return 1;
 }
@@ -95,24 +100,45 @@ int Application::update() {
     running_ = 0;
     return 0;
   }
-  if (paused_) return 1;
 
-  GameModeId next = current_mode_->update();
-  if (next == current_mode_id_) return 1;
-  current_mode_->finalize();
-  current_mode_ = 0;
-  current_mode_id_ = next;
-  if (next == GAME_MODE_EXIT) {
-    running_ = 0;
-    return 0;
+  struct iocs_time now = _iocs_ontime();
+  long elapsed = ontime_diff_cs(previous_time_, now);
+  previous_time_ = now;
+  if (elapsed < 0) elapsed = 0;
+  if (elapsed > MAX_FRAME_CS) elapsed = MAX_FRAME_CS;
+  uint16_t frame_dt_cs = (uint16_t)elapsed;
+
+  frame_accumulator_cs_ += frame_dt_cs;
+  render_due_ = 0;
+  while (frame_accumulator_cs_ >= FIXED_FRAME_STEP_CS) {
+    frame_accumulator_cs_ -= FIXED_FRAME_STEP_CS;
+    render_due_ = 1;
+    if (paused_) continue;
+
+    GameModeId next = current_mode_->update();
+    if (next == current_mode_id_) continue;
+
+    current_mode_->finalize();
+    current_mode_ = 0;
+    current_mode_id_ = next;
+    frame_accumulator_cs_ = 0;
+    if (next == GAME_MODE_EXIT) {
+      running_ = 0;
+      return 0;
+    }
+    current_mode_ = mode_for(next);
+    running_ = current_mode_ && current_mode_->initialize();
+    if (!running_) return 0;
   }
-  current_mode_ = mode_for(next);
-  running_ = current_mode_ && current_mode_->initialize();
-  return running_;
+
+  return 1;
 }
 
 void Application::render() {
-  if (current_mode_) current_mode_->render();
+  if (current_mode_ && render_due_) {
+    current_mode_->render();
+    render_due_ = 0;
+  }
 }
 
 void Application::finalize() {
@@ -128,6 +154,10 @@ void Application::finalize() {
   running_ = 0;
 }
 
-void Application::set_paused(int paused) { paused_ = paused != 0; }
+void Application::set_paused(int paused) {
+  paused_ = paused != 0;
+  frame_accumulator_cs_ = 0;
+  previous_time_ = _iocs_ontime();
+}
 
 int Application::paused() const { return paused_; }
