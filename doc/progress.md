@@ -99,6 +99,24 @@
 - 既存の`dist/wdrfrace.xdf`をAABB消去版として保持したまま、`DIRTY_RECT=0`の黒線消去版を`dist/wdrline.xdf`として追加生成。
 - `wdrfrace.xdf`と`wdrline.xdf`を同一条件で実行し、300フレーム平均FPSを直接比較可能にした。
 
+### Application / GameModeクラスへのリファクタリング（同日）
+
+- `Application`クラスを追加し、`application_initialize()`、`application_update()`、`application_finalize()`へ画面初期化、垂直同期、モード更新、終了復元を集約。
+- 仮想関数`initialize()`、`update()`、`finalize()`を持つ`GameMode`基底クラスを追加。
+- 現在のカメラ周回・車体・FPS計測処理を`GameModeTest`派生クラスへ移動。
+- `Application`が現在の`GameModeId`と`GameMode`ポインタを保持し、今後のタイトル・ゲーム・リザルトモード追加に対応できる構造へ変更。
+- XYZデバッグ軸のモデル、現在座標、前フレーム座標、可視状態、投影・描画処理を`GameModeTest`のメンバへ集約。
+- `main()`をApplicationの初期化、更新ループ、終了処理だけに短縮。
+- AABBと黒線消去の性能差を確認しやすいよう、車体を画面中央の大部分を占めるサイズへ拡大。
+- `DIRTY_RECT=1`を`dist/wdrfrace.xdf`、`DIRTY_RECT=0`を`dist/wdrline.xdf`として再生成。
+
+### ダーティ矩形方式の廃止（同日）
+
+- 画面内で車体を大きく表示した条件で、AABB矩形消去版は約13.29 FPS、黒線7本消去版は約30.15 FPSを確認。
+- AABB内部全体への書き込み負荷が、IOCS呼び出し回数を減らす効果を上回ると判断。
+- `USE_DIRTY_RECT_CLEAR`による条件分岐とAABB計算処理を削除し、黒線7本による消去へ一本化。
+- Makefileから`DIRTY_RECT`切り替え設定を削除。
+
 ### OpenGL準拠座標系とデバッグ軸（同日）
 
 - 座標系を右が+X、上が+Y、カメラ前方が-ZのOpenGL準拠右手座標系へ変更。

@@ -58,9 +58,7 @@ typedef struct {
 
 typedef struct {
   int frame;
-  iocs_color_t old_mode;
   Vec3f base[CAR_VERTEX_COUNT];
-  Vec3f curr[CAR_VERTEX_COUNT];
   Vec2s prev[CAR_VERTEX_COUNT];
   Vec2s next[CAR_VERTEX_COUNT];
   uint8_t visible_prev[CAR_VERTEX_COUNT];
@@ -75,19 +73,12 @@ typedef struct {
 } GameState;
 
 static const Vec3f kCarModel[] = {
-  {-1.8f, -0.65f, 0.0f}, {1.8f, -0.65f, 0.0f},
-  {1.35f, 0.65f, 0.0f}, {-1.35f, 0.65f, 0.0f},
+  {-7.0f, -5.0f, 0.0f}, {7.0f, -5.0f, 0.0f},
+  {5.5f, 5.0f, 0.0f}, {-5.5f, 5.0f, 0.0f},
 };
 
 static const Edge kEdges[] = {
   {0, 1}, {1, 2}, {2, 3}, {3, 0},
-};
-
-static const Vec3f kDebugAxes[DEBUG_AXIS_POINT_COUNT] = {
-  {0.0f, 0.0f, 0.0f},
-  {1.0f, 0.0f, 0.0f},
-  {0.0f, 1.0f, 0.0f},
-  {0.0f, 0.0f, 1.0f},
 };
 
 static float g_sin_table[TRIG_TABLE_SIZE];
@@ -175,60 +166,6 @@ static void draw_wire(const Vec2s *pt, const uint8_t *visible, iocs_color_t colo
     draw_line(pt[e.a].x, pt[e.a].y, pt[e.b].x, pt[e.b].y, color);
   }
 }
-
-static void draw_debug_axes(const Vec2s *pt, const uint8_t *visible) {
-  if (!visible[0]) return;
-  if (visible[1]) draw_line(pt[0].x, pt[0].y, pt[1].x, pt[1].y, COLOR_RED);
-  if (visible[2]) draw_line(pt[0].x, pt[0].y, pt[2].x, pt[2].y, COLOR_GREEN);
-  if (visible[3]) draw_line(pt[0].x, pt[0].y, pt[3].x, pt[3].y, COLOR_BLUE);
-}
-
-#ifdef USE_DIRTY_RECT_CLEAR
-static void clear_previous_frame(const Vec2s *car, const uint8_t *car_visible,
-                                 const Vec2s *axis,
-                                 const uint8_t *axis_visible) {
-  int min_x = 32767;
-  int min_y = 32767;
-  int max_x = -32768;
-  int max_y = -32768;
-
-  for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
-    if (!car_visible[i]) continue;
-    if (car[i].x < min_x) min_x = car[i].x;
-    if (car[i].y < min_y) min_y = car[i].y;
-    if (car[i].x > max_x) max_x = car[i].x;
-    if (car[i].y > max_y) max_y = car[i].y;
-  }
-  for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
-    if (!axis_visible[i]) continue;
-    if (axis[i].x < min_x) min_x = axis[i].x;
-    if (axis[i].y < min_y) min_y = axis[i].y;
-    if (axis[i].x > max_x) max_x = axis[i].x;
-    if (axis[i].y > max_y) max_y = axis[i].y;
-  }
-
-  if (max_x < 0 || max_y < 0 || min_x >= FIELD_W || min_y >= FIELD_H) return;
-  if (min_x > 0) --min_x;
-  if (min_y > 0) --min_y;
-  if (max_x < FIELD_W - 1) ++max_x;
-  if (max_y < FIELD_H - 1) ++max_y;
-  if (min_x < 0) min_x = 0;
-  if (min_y < 0) min_y = 0;
-  if (max_x >= FIELD_W) max_x = FIELD_W - 1;
-  if (max_y >= FIELD_H) max_y = FIELD_H - 1;
-
-  draw_fill_block(min_x, min_y, max_x, max_y, COLOR_BLACK);
-}
-#else
-static void erase_debug_axes(const Vec2s *pt, const uint8_t *visible) {
-  if (!visible[0]) return;
-  for (int i = 1; i < DEBUG_AXIS_POINT_COUNT; ++i) {
-    if (visible[i]) {
-      draw_line(pt[0].x, pt[0].y, pt[i].x, pt[i].y, COLOR_BLACK);
-    }
-  }
-}
-#endif
 
 static const uint8_t *glyph_for_char(char c) {
   if (c >= '0' && c <= '9') return kDigits4x5[c - '0'];
@@ -366,96 +303,198 @@ static int key_down(int scan) {
   return (_iocs_bitsns(scan >> 3) & (1 << (scan & 7))) != 0;
 }
 
-static void init_state(GameState *s) {
-  init_trig_table();
-  s->camera_angle = 0.0f;
-  s->frame = 0;
-  s->have_prev = 0;
-  s->fps_count = 0;
-  s->fps_x100 = 0;
-  s->fps_ready = 0;
-  s->old_mode = _iocs_crtmod(-1);
-  for (int i = 0; i < CAR_VERTEX_COUNT; ++i) s->base[i] = kCarModel[i];
-  _iocs_crtmod(12);
-  _iocs_g_clr_on();
-  _iocs_b_curoff();
-}
+enum GameModeId {
+  GAME_MODE_TEST,
+  GAME_MODE_EXIT,
+};
 
-static void shutdown(iocs_color_t old_mode) {
-  _iocs_b_curon();
-  _iocs_crtmod(old_mode);
-}
+class GameMode {
+ public:
+  virtual int initialize() { return 1; }
+  virtual GameModeId update() { return GAME_MODE_EXIT; }
+  virtual void finalize() {}
+};
 
-int main(void) {
-  GameState state;
-  Vec2s debug_axis_points[DEBUG_AXIS_POINT_COUNT];
-  Vec2s debug_axis_prev[DEBUG_AXIS_POINT_COUNT];
-  uint8_t debug_axis_visible[DEBUG_AXIS_POINT_COUNT];
-  uint8_t debug_axis_visible_prev[DEBUG_AXIS_POINT_COUNT];
-  init_state(&state);
+class GameModeTest : public GameMode {
+ private:
+  GameState state_;
+  Vec3f debug_axis_model_[DEBUG_AXIS_POINT_COUNT];
+  Vec2s debug_axis_points_[DEBUG_AXIS_POINT_COUNT];
+  Vec2s debug_axis_prev_[DEBUG_AXIS_POINT_COUNT];
+  uint8_t debug_axis_visible_[DEBUG_AXIS_POINT_COUNT];
+  uint8_t debug_axis_visible_prev_[DEBUG_AXIS_POINT_COUNT];
 
-  if (set_60hz() != 0) {
-    shutdown(state.old_mode);
-    return 0;
+  void initialize_debug_axis() {
+    for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
+      debug_axis_model_[i].x = 0.0f;
+      debug_axis_model_[i].y = 0.0f;
+      debug_axis_model_[i].z = 0.0f;
+    }
+    debug_axis_model_[1].x = 1.0f;
+    debug_axis_model_[2].y = 1.0f;
+    debug_axis_model_[3].z = 1.0f;
   }
 
-  draw_fill_block(0, 0, FIELD_W - 1, FIELD_H - 1, COLOR_BLACK);
-  draw_fps_hud(&state);
+  void project_debug_axis(float cz, float sz) {
+    for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
+      debug_axis_visible_[i] = (uint8_t)project_world(
+          &debug_axis_model_[i], cz, sz, &debug_axis_points_[i]);
+    }
+  }
 
-  for (;;) {
-    if (wait_vdisp() != 0) break;
-    if (key_down(KEY_ESC)) break;
+  void draw_debug_axis() const {
+    if (!debug_axis_visible_[0]) return;
+    if (debug_axis_visible_[1]) {
+      draw_line(debug_axis_points_[0].x, debug_axis_points_[0].y,
+                debug_axis_points_[1].x, debug_axis_points_[1].y, COLOR_RED);
+    }
+    if (debug_axis_visible_[2]) {
+      draw_line(debug_axis_points_[0].x, debug_axis_points_[0].y,
+                debug_axis_points_[2].x, debug_axis_points_[2].y, COLOR_GREEN);
+    }
+    if (debug_axis_visible_[3]) {
+      draw_line(debug_axis_points_[0].x, debug_axis_points_[0].y,
+                debug_axis_points_[3].x, debug_axis_points_[3].y, COLOR_BLUE);
+    }
+  }
 
-    int fps_updated = update_fps(&state);
+  void erase_previous_frame() {
+    if (!state_.have_prev) return;
+    draw_wire(state_.prev, state_.visible_prev, COLOR_BLACK);
+    if (debug_axis_visible_prev_[0]) {
+      for (int i = 1; i < DEBUG_AXIS_POINT_COUNT; ++i) {
+        if (debug_axis_visible_prev_[i]) {
+          draw_line(debug_axis_prev_[0].x, debug_axis_prev_[0].y,
+                    debug_axis_prev_[i].x, debug_axis_prev_[i].y, COLOR_BLACK);
+        }
+      }
+    }
+  }
 
-    int angle_index = trig_index(state.camera_angle);
+  void save_previous_frame() {
+    for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
+      state_.prev[i] = state_.next[i];
+      state_.visible_prev[i] = state_.visible_next[i];
+    }
+    for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
+      debug_axis_prev_[i] = debug_axis_points_[i];
+      debug_axis_visible_prev_[i] = debug_axis_visible_[i];
+    }
+    state_.have_prev = 1;
+  }
+
+ public:
+  virtual int initialize() {
+    init_trig_table();
+    state_.camera_angle = 0.0f;
+    state_.frame = 0;
+    state_.have_prev = 0;
+    state_.fps_count = 0;
+    state_.fps_x100 = 0;
+    state_.fps_ready = 0;
+    for (int i = 0; i < CAR_VERTEX_COUNT; ++i) state_.base[i] = kCarModel[i];
+    initialize_debug_axis();
+    draw_fill_block(0, 0, FIELD_W - 1, FIELD_H - 1, COLOR_BLACK);
+    draw_fps_hud(&state_);
+    return 1;
+  }
+
+  virtual GameModeId update() {
+    if (key_down(KEY_ESC)) return GAME_MODE_EXIT;
+
+    int fps_updated = update_fps(&state_);
+    int angle_index = trig_index(state_.camera_angle);
     float sz = g_sin_table[angle_index];
     float cz =
         g_sin_table[(angle_index + TRIG_QUARTER) & TRIG_TABLE_MASK];
 
-    for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
-      debug_axis_visible[i] = (uint8_t)project_world(
-          &kDebugAxes[i], cz, sz, &debug_axis_points[i]);
-    }
-
+    project_debug_axis(cz, sz);
     for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
-      Vec3f p = state.base[i];
-      state.curr[i] = p;
-      state.visible_next[i] =
-          (uint8_t)project_world(&p, cz, sz, &state.next[i]);
+      state_.visible_next[i] = (uint8_t)project_world(
+          &state_.base[i], cz, sz, &state_.next[i]);
     }
 
-    if (state.have_prev) {
-#ifdef USE_DIRTY_RECT_CLEAR
-      clear_previous_frame(state.prev, state.visible_prev,
-                           debug_axis_prev, debug_axis_visible_prev);
-#else
-      draw_wire(state.prev, state.visible_prev, COLOR_BLACK);
-      erase_debug_axes(debug_axis_prev, debug_axis_visible_prev);
-#endif
-    }
-    draw_wire(state.next, state.visible_next, COLOR_WHITE);
-    draw_debug_axes(debug_axis_points, debug_axis_visible);
-    if (fps_updated) draw_fps_hud(&state);
+    erase_previous_frame();
+    draw_wire(state_.next, state_.visible_next, COLOR_WHITE);
+    draw_debug_axis();
+    if (fps_updated) draw_fps_hud(&state_);
+    save_previous_frame();
 
-    for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
-      state.prev[i] = state.next[i];
-      state.visible_prev[i] = state.visible_next[i];
+    state_.camera_angle += 0.015f;
+    if (state_.camera_angle >= 6.2831853f) {
+      state_.camera_angle -= 6.2831853f;
     }
-    for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
-      debug_axis_prev[i] = debug_axis_points[i];
-      debug_axis_visible_prev[i] = debug_axis_visible[i];
-    }
-    state.have_prev = 1;
-
-    state.camera_angle += 0.015f;
-    if (state.camera_angle >= 6.2831853f) {
-      state.camera_angle -= 6.2831853f;
-    }
-    ++state.frame;
+    ++state_.frame;
+    return GAME_MODE_TEST;
   }
 
-  draw_fill_block(0, 0, FIELD_W - 1, FIELD_H - 1, COLOR_BLACK);
-  shutdown(state.old_mode);
+  virtual void finalize() {}
+};
+
+class Application {
+ private:
+  int old_mode_;
+  GameModeId current_mode_id_;
+  GameMode *current_mode_;
+  GameModeTest test_mode_;
+
+  GameMode *mode_for(GameModeId id) {
+    if (id == GAME_MODE_TEST) return &test_mode_;
+    return 0;
+  }
+
+ public:
+  int application_initialize() {
+    current_mode_ = 0;
+    old_mode_ = _iocs_crtmod(-1);
+    _iocs_crtmod(12);
+    _iocs_g_clr_on();
+    _iocs_b_curoff();
+    if (set_60hz() != 0) {
+      application_finalize();
+      return 0;
+    }
+
+    current_mode_id_ = GAME_MODE_TEST;
+    current_mode_ = mode_for(current_mode_id_);
+    if (!current_mode_ || !current_mode_->initialize()) {
+      application_finalize();
+      return 0;
+    }
+    return 1;
+  }
+
+  int application_update() {
+    if (wait_vdisp() != 0 || !current_mode_) return 0;
+    GameModeId next = current_mode_->update();
+    if (next == current_mode_id_) return 1;
+
+    current_mode_->finalize();
+    current_mode_ = 0;
+    current_mode_id_ = next;
+    if (next == GAME_MODE_EXIT) return 0;
+
+    current_mode_ = mode_for(next);
+    return current_mode_ && current_mode_->initialize();
+  }
+
+  void application_finalize() {
+    if (current_mode_) {
+      current_mode_->finalize();
+      current_mode_ = 0;
+    }
+    draw_fill_block(0, 0, FIELD_W - 1, FIELD_H - 1, COLOR_BLACK);
+    _iocs_b_curon();
+    int mode = old_mode_;
+    if (mode < 0 || mode > 0x7f) mode = 12;
+    _iocs_crtmod(mode);
+  }
+};
+
+int main(void) {
+  Application application;
+  if (!application.application_initialize()) return 0;
+  while (application.application_update()) {}
+  application.application_finalize();
   return 0;
 }
