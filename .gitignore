@@ -4,6 +4,14 @@
 /src/*.elf*
 /src/human.sys
 /src/build/
+/src/introdat.h
+/src/introdat.h.tmp
+/src/titldat.h
+/src/titldat.h.tmp
+/src/demodat.h
+/src/demodat.h.tmp
+/src/herodat.h
+/src/herodat.h.tmp
 /doc/.tmp*
 
 # Editor and OS files
@@ -12,3 +20,10 @@
 *~
 Thumbs.db
 .DS_Store
+
+# Generated header temporary files
+/src/*.h.tmp
+
+# Python bytecode caches
+__pycache__/
+*.py[cod]

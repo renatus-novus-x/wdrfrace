@@ -12,6 +12,9 @@ LDFLAGS = -Ttext=0x6800 -s -specs=x68knodos.specs
 SOURCES := $(wildcard *.cpp)
 OBJECTS := $(SOURCES:.cpp=.o)
 DEPS := $(OBJECTS:.o=.d)
+INTRO_DATA := introdat.h
+DEMO_DATA := demodat.h
+HERO_DATA := herodat.h
 
 PYTHON ?= python3
 CURL ?= curl
@@ -45,6 +48,21 @@ $(TARGET): $(OBJECTS)
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $<
 
+gmrace.o: $(INTRO_DATA)
+gmdemo.o: $(DEMO_DATA)
+gmtitle.o: $(HERO_DATA)
+
+$(INTRO_DATA): mkintro.py
+	$(PYTHON) $< > $@.tmp
+	mv $@.tmp $@
+
+$(DEMO_DATA): mktitle.py
+	$(PYTHON) $< > $@.tmp
+	mv $@.tmp $@
+
+$(HERO_DATA): mkhero.py
+	$(PYTHON) $<
+
 $(BUILD_DIR):
 	mkdir -p $@
 
@@ -69,6 +87,8 @@ clean:
 
 distclean: clean
 	-rm -rf $(BUILD_DIR)
+	-rm -f $(INTRO_DATA) $(INTRO_DATA).tmp $(DEMO_DATA) $(DEMO_DATA).tmp
+	-rm -f $(HERO_DATA) $(HERO_DATA).tmp titldat.h titldat.h.tmp
 
 -include $(DEPS)
 

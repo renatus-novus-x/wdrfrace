@@ -65,7 +65,11 @@ void clear_screen() {
 }  // namespace
 
 GameMode *Application::mode_for(GameModeId id) {
+  if (id == GAME_MODE_TITLE) return &title_mode_;
+  if (id == GAME_MODE_DEMO) return &demo_mode_;
+  if (id == GAME_MODE_HOW_TO_PLAY) return &controls_mode_;
   if (id == GAME_MODE_TEST) return &test_mode_;
+  if (id == GAME_MODE_RACE) return &race_mode_;
   return 0;
 }
 
@@ -83,7 +87,7 @@ int Application::initialize() {
     finalize();
     return 0;
   }
-  current_mode_id_ = GAME_MODE_TEST;
+  current_mode_id_ = GAME_MODE_TITLE;
   current_mode_ = mode_for(current_mode_id_);
   if (!current_mode_ || !current_mode_->initialize()) {
     finalize();

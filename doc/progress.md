@@ -185,3 +185,22 @@
 - Makefileの `*.cpp` 自動検出により、追加した `math3d.cpp` もMakefileを変更せずビルド対象になった。
 - WSL Ubuntu 24.04上のelf2x68k環境でクリーンビルドに成功した。
 - `-specs=x68knodos.specs` で `human.sys` を生成し、`dist/wdrfrace.xdf` を再生成した。
+
+## 2026-08-25
+
+### Scanner Garage title presentation update
+
+- Replaced the single moving scan line with animated wireframe car highlights and runway guide lights.
+- Added eight-step brightness gradients for the red and blue cars, using palette color replacement instead of alpha blending.
+- Made a white highlight travel along each car's edges in opposite directions to create continuous motion with few changed pixels.
+- Added sequential runway lights between the two cars to reinforce depth without a large moving line.
+- Kept four fixed cinematic camera cuts to contrast the calm title presentation with the faster DEMO REPLAY sequence.
+- Moved camera projection and line clipping to `mkhero.py`; runtime rendering reads precomputed `HeroShot` and `HeroFrame` data from `herodat.h`.
+- Avoided black-line erasure during ordinary title frames. Only changed car edges and guide lights are repainted, reducing flicker and write volume.
+- Updated the generated-header rule for `herodat.h` and added `/src/*.h.tmp` to `.gitignore` for interrupted atomic-generation artifacts.
+- Rebuilt successfully with the elf2x68k environment on WSL Ubuntu 24.04 and regenerated `dist/wdrfrace.xdf`.
+
+### Python build cache exclusion
+
+- Added `__pycache__/` and `*.py[cod]` to `.gitignore`.
+- Python bytecode caches are generated from the build-time source scripts and are not required to build or run the XDF image.

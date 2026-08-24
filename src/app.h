@@ -5,7 +5,11 @@
 #include <x68k/iocs.h>
 
 #include "gmode.h"
+#include "gmctrl.h"
+#include "gmdemo.h"
+#include "gmrace.h"
 #include "gmtest.h"
+#include "gmtitle.h"
 
 class Application {
  private:
@@ -17,7 +21,11 @@ class Application {
   int render_due_;
   GameModeId current_mode_id_;
   GameMode *current_mode_;
+  GameModeTitle title_mode_;
+  GameModeDemo demo_mode_;
+  GameModeControls controls_mode_;
   GameModeTest test_mode_;
+  GameModeRace race_mode_;
 
   GameMode *mode_for(GameModeId id);
 

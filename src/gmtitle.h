@@ -1,0 +1,43 @@
+#ifndef WDRFRACE_GMTITLE_H
+#define WDRFRACE_GMTITLE_H
+
+#include "gmode.h"
+#include "input.h"
+#include "math3d.h"
+
+struct HeroFrame;
+
+class GameModeTitle : public GameMode {
+ public:
+  GameModeTitle();
+  virtual int initialize();
+  virtual GameModeId update();
+  virtual void render();
+  virtual void finalize();
+
+ private:
+  void draw_scene();
+  void draw_prompt(int color);
+  void clear_garage();
+  void draw_edges(const Vec2s (*edges)[2], int count, int color);
+  void draw_one_edge(const Vec2s (*edges)[2], int index, int color);
+  int car_color(int car, int pulse) const;
+  int car_edge_index(int car, int phase) const;
+  void draw_static_shot(const HeroFrame &frame);
+  void draw_cut_markers(int color);
+  void draw_garage_frame(const HeroFrame &previous,
+                         const HeroFrame &next);
+
+  Input input_;
+  int confirm_down_;
+  int prompt_frame_;
+  int prompt_visible_;
+  int prompt_changed_;
+  int idle_frames_;
+  int frame_;
+  int drawn_frame_;
+  int frame_changed_;
+  int cut_markers_visible_;
+};
+
+#endif
