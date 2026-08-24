@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <x68k/iocs.h>
 
+#include "camera.h"
 #include "gmode.h"
 
 class GameModeTest : public GameMode {
@@ -12,17 +13,6 @@ class GameModeTest : public GameMode {
     CAR_VERTEX_COUNT = 4,
     DEBUG_AXIS_POINT_COUNT = 4,
     TRIG_TABLE_SIZE = 256,
-  };
-
-  struct Vec3f {
-    float x;
-    float y;
-    float z;
-  };
-
-  struct Vec2s {
-    int16_t x;
-    int16_t y;
   };
 
   struct State {
@@ -41,6 +31,7 @@ class GameModeTest : public GameMode {
   };
 
   State state_;
+  Camera camera_;
   float sin_table_[TRIG_TABLE_SIZE];
   Vec3f debug_axis_model_[DEBUG_AXIS_POINT_COUNT];
   Vec2s debug_axis_points_[DEBUG_AXIS_POINT_COUNT];
@@ -57,8 +48,9 @@ class GameModeTest : public GameMode {
   long ontime_diff_cs(struct iocs_time start, struct iocs_time end) const;
   void initialize_car();
   void initialize_debug_axis();
-  void project_debug_axis(float cz, float sz);
-  int project_world(const Vec3f &in, float cz, float sz, Vec2s &out) const;
+  void update_camera();
+  void project_debug_axis();
+  int project_world(const Vec3f &in, Vec2s &out) const;
   int key_down(int scan) const;
   void draw_fill_block(int x1, int y1, int x2, int y2,
                        iocs_color_t color) const;

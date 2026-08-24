@@ -1,5 +1,6 @@
 # elf2x68k build outputs
 /src/*.o
+/src/*.d
 /src/*.elf*
 /src/human.sys
 /src/build/

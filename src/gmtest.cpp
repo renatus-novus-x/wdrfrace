@@ -19,9 +19,8 @@ const iocs_color_t COLOR_RED = 0x07c1;
 const iocs_color_t COLOR_GREEN = 0xf801;
 const iocs_color_t COLOR_BLUE = 0x003f;
 
-const float CAMERA_DISTANCE = 13.0f;
-const float CAMERA_RADIUS_NORMALIZED = 0.923076923f;
-const float CAMERA_HEIGHT_NORMALIZED = 0.384615385f;
+const float CAMERA_RADIUS = 12.0f;
+const float CAMERA_HEIGHT = 5.0f;
 const float TRIG_INDEX_SCALE = 40.74366543f;
 const float CAMERA_STEP_PER_UPDATE = 0.045f;
 
@@ -85,27 +84,30 @@ void GameModeTest::initialize_debug_axis() {
   debug_axis_model_[3].z = 1.0f;
 }
 
-int GameModeTest::project_world(const Vec3f &in, float cz, float sz,
-                                Vec2s &out) const {
-  float x = in.x * cz - in.z * sz;
-  float y = -in.x * sz * CAMERA_HEIGHT_NORMALIZED
-          + in.y * CAMERA_RADIUS_NORMALIZED
-          - in.z * cz * CAMERA_HEIGHT_NORMALIZED;
-  float z = in.x * sz * CAMERA_RADIUS_NORMALIZED
-          + in.y * CAMERA_HEIGHT_NORMALIZED
-          + in.z * cz * CAMERA_RADIUS_NORMALIZED
-          - CAMERA_DISTANCE;
-  if (z > -1.0f) return 0;
-  float p = 320.0f / -z;
-  out.x = (int16_t)(FIELD_W * 0.5f + x * p);
-  out.y = (int16_t)(FIELD_H * 0.5f - y * p);
+void GameModeTest::update_camera() {
+  int angle_index = trig_index(state_.camera_angle);
+  float sz = sin_table_[angle_index];
+  float cz = sin_table_[(angle_index + TRIG_TABLE_SIZE / 4)
+                        & (TRIG_TABLE_SIZE - 1)];
+  Vec3f eye = {CAMERA_RADIUS * sz, CAMERA_HEIGHT, CAMERA_RADIUS * cz};
+  const Vec3f target = {0.0f, 0.0f, 0.0f};
+  const Vec3f up = {0.0f, 1.0f, 0.0f};
+  camera_.look_at(eye, target, up);
+}
+
+int GameModeTest::project_world(const Vec3f &in, Vec2s &out) const {
+  Vec3f view = camera_.world_to_view(in);
+  if (view.z > -1.0f) return 0;
+  float p = 320.0f / -view.z;
+  out.x = (int16_t)(FIELD_W * 0.5f + view.x * p);
+  out.y = (int16_t)(FIELD_H * 0.5f - view.y * p);
   return 1;
 }
 
-void GameModeTest::project_debug_axis(float cz, float sz) {
+void GameModeTest::project_debug_axis() {
   for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
     debug_axis_visible_[i] = (uint8_t)project_world(
-        debug_axis_model_[i], cz, sz, debug_axis_points_[i]);
+        debug_axis_model_[i], debug_axis_points_[i]);
   }
 }
 
@@ -269,6 +271,7 @@ int GameModeTest::initialize() {
   initialize_car();
   initialize_debug_axis();
   state_.camera_angle = 0.0f;
+  update_camera();
   state_.frame = 0;
   state_.have_prev = 0;
   state_.fps_count = 0;
@@ -295,18 +298,14 @@ GameModeId GameModeTest::update() {
   debug_toggle_down_ = debug_toggle;
 
   state_.camera_angle += CAMERA_STEP_PER_UPDATE;
+  update_camera();
   ++state_.frame;
   return GAME_MODE_TEST;
 }
 
 void GameModeTest::render() {
-  int angle_index = trig_index(state_.camera_angle);
-  float sz = sin_table_[angle_index];
-  float cz = sin_table_[(angle_index + TRIG_TABLE_SIZE / 4)
-                        & (TRIG_TABLE_SIZE - 1)];
-
   if (debug_visible_) {
-    project_debug_axis(cz, sz);
+    project_debug_axis();
   } else {
     for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
       debug_axis_visible_[i] = 0;
@@ -314,7 +313,7 @@ void GameModeTest::render() {
   }
   for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
     state_.visible_next[i] = (uint8_t)project_world(
-        state_.base[i], cz, sz, state_.next[i]);
+        state_.base[i], state_.next[i]);
   }
 
   fps_updated_ = update_fps();
