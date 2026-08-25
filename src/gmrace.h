@@ -7,6 +7,7 @@
 #include "camera.h"
 #include "car.h"
 #include "gmode.h"
+#include "gmresult.h"
 #include "input.h"
 
 class GameModeRace : public GameMode {
@@ -23,6 +24,9 @@ class GameModeRace : public GameMode {
   float sin_table_[TRIG_TABLE_SIZE];
   int intro_frame_;
   int intro_drawn_frame_[2];
+  int player_count_;
+  RaceWinner winner_;
+  int lap_drawn_[2][PLAYER_COUNT];
 
   void initialize_trig_table();
   void prepare_intro_frame(int frame);
@@ -36,8 +40,15 @@ class GameModeRace : public GameMode {
   void repair_track(const Vec2s track[2][TRACK_SEGMENTS],
                     const ScreenRect *damage, int damage_count) const;
   void clear_screen() const;
+  CarInput cpu_input() const;
+  void draw_hud(int page);
 
  public:
+  GameModeRace();
+  void set_player_count(int players);
+  int player_count() const;
+  RaceWinner winner() const;
+  int lap(int player) const;
   virtual int initialize();
   virtual GameModeId update();
   virtual void render(int page);

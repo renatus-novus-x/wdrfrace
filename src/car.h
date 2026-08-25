@@ -43,6 +43,9 @@ class Car {
   void clear_previous(int page);
   void render(int page, iocs_color_t color);
   int speed() const;
+  int angle() const;
+  int offset() const;
+  int boost() const;
   int lap() const;
 };
 

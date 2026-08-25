@@ -8,6 +8,7 @@
 #include "gmctrl.h"
 #include "gmdemo.h"
 #include "gmrace.h"
+#include "gmresult.h"
 #include "gmtest.h"
 #include "gmtitle.h"
 
@@ -28,6 +29,7 @@ class Application {
   GameModeControls controls_mode_;
   GameModeTest test_mode_;
   GameModeRace race_mode_;
+  GameModeResult result_mode_;
 
   GameMode *mode_for(GameModeId id);
   int initialize_current_mode();

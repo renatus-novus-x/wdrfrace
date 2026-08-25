@@ -62,6 +62,7 @@ GameMode *Application::mode_for(GameModeId id) {
   if (id == GAME_MODE_HOW_TO_PLAY) return &controls_mode_;
   if (id == GAME_MODE_TEST) return &test_mode_;
   if (id == GAME_MODE_RACE) return &race_mode_;
+  if (id == GAME_MODE_RESULT) return &result_mode_;
   return 0;
 }
 
@@ -135,6 +136,19 @@ int Application::update() {
 
     GameModeId next = current_mode_->update();
     if (next == current_mode_id_) continue;
+
+    if (current_mode_id_ == GAME_MODE_TITLE &&
+        next == GAME_MODE_HOW_TO_PLAY) {
+      const int players = title_mode_.player_count();
+      controls_mode_.set_player_count(players);
+      race_mode_.set_player_count(players);
+    }
+    if (current_mode_id_ == GAME_MODE_RACE &&
+        next == GAME_MODE_RESULT) {
+      result_mode_.set_result(race_mode_.player_count(),
+                              race_mode_.winner(),
+                              race_mode_.lap(0), race_mode_.lap(1));
+    }
 
     current_mode_->finalize();
     current_mode_ = 0;

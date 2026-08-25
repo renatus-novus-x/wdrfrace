@@ -13,10 +13,17 @@ const iocs_color_t COLOR_P2 = 0x62bf;
 
 }  // namespace
 
+GameModeControls::GameModeControls() : player_count_(1) {}
+
+void GameModeControls::set_player_count(int players) {
+  player_count_ = players == 2 ? 2 : 1;
+}
+
 void GameModeControls::draw_screen() const {
   screen_clear(COLOR_BLACK);
   screen_text_tracking(24, 10, "RACE CONTROL", 1, 1, COLOR_CYAN);
-  screen_text(466, 10, "2P", 1, COLOR_WHITE);
+  screen_text(466, 10, player_count_ == 1 ? "1P" : "2P", 1,
+              COLOR_WHITE);
   screen_line(24, 26, 488, 26, COLOR_CYAN);
   vector_centered("HOW TO PLAY", 40, 6, 2, 2, COLOR_WHITE);
   screen_line(176, 88, 336, 88, COLOR_CYAN);
@@ -24,14 +31,20 @@ void GameModeControls::draw_screen() const {
   vector_centered("PLAYER 1", 108, 4, 2, 1, COLOR_P1);
   screen_centered_tracking("W S  SPEED   A D  DRIFT", 154, 1, 3,
                            COLOR_WHITE);
-  screen_centered_tracking("Q  BOOST   E  BRAKE", 180, 1, 3,
+  screen_centered_tracking("Q E OR PAD 1 BUTTONS", 180, 1, 3,
                            COLOR_WHITE);
   screen_line(64, 210, 448, 210, 0x2109);
   vector_centered("PLAYER 2", 226, 4, 2, 1, COLOR_P2);
-  screen_centered_tracking("CURSOR KEYS  SPEED DRIFT", 272, 1, 3,
-                           COLOR_WHITE);
-  screen_centered_tracking("N  BOOST   M  BRAKE", 298, 1, 3,
-                           COLOR_WHITE);
+  if (player_count_ == 1) {
+    screen_centered_tracking("CPU DRIVER", 272, 1, 3, COLOR_WHITE);
+    screen_centered_tracking("AUTOMATIC CONTROL", 298, 1, 3,
+                             COLOR_WHITE);
+  } else {
+    screen_centered_tracking("CURSOR KEYS  SPEED DRIFT", 272, 1, 3,
+                             COLOR_WHITE);
+    screen_centered_tracking("N M OR PAD 2 BUTTONS", 298, 1, 3,
+                             COLOR_WHITE);
+  }
   screen_line(64, 330, 448, 330, 0x2109);
   vector_centered("FIRST TO 3 LAPS", 348, 4, 1, 1, COLOR_CYAN);
   screen_centered_tracking("SPACE START", 404, 1, 4, COLOR_WHITE);

@@ -33,6 +33,8 @@ void line(const Vec2s &a, const Vec2s &b, int color) {
 
 GameModeTitle::GameModeTitle()
     : confirm_down_(0),
+      direction_down_(0),
+      selected_players_(1),
       prompt_frame_(0),
       prompt_visible_(1),
       idle_frames_(0),
@@ -40,12 +42,14 @@ GameModeTitle::GameModeTitle()
   for (int page = 0; page < 2; ++page) {
     drawn_frame_[page] = -1;
     prompt_drawn_visible_[page] = -1;
+    menu_drawn_players_[page] = 0;
     cut_markers_visible_[page] = 0;
   }
 }
 
 int GameModeTitle::initialize() {
   confirm_down_ = 0;
+  direction_down_ = 0;
   prompt_frame_ = 0;
   prompt_visible_ = 1;
   idle_frames_ = 0;
@@ -53,6 +57,7 @@ int GameModeTitle::initialize() {
   for (int page = 0; page < 2; ++page) {
     drawn_frame_[page] = -1;
     prompt_drawn_visible_[page] = -1;
+    menu_drawn_players_[page] = 0;
     cut_markers_visible_[page] = 0;
   }
   input_.update();
@@ -61,6 +66,12 @@ int GameModeTitle::initialize() {
 
 GameModeId GameModeTitle::update() {
   input_.update();
+  const int direction = input_.menu_up() || input_.menu_down();
+  if (direction && !direction_down_) {
+    if (input_.menu_up()) selected_players_ = 1;
+    if (input_.menu_down()) selected_players_ = 2;
+  }
+  direction_down_ = direction;
   const int confirm = input_.confirm();
   if (confirm && !confirm_down_) {
     return GAME_MODE_HOW_TO_PLAY;
@@ -97,10 +108,16 @@ void GameModeTitle::render(int page) {
     draw_prompt(prompt_visible_ ? COLOR_WHITE : COLOR_BLACK);
     prompt_drawn_visible_[page] = prompt_visible_;
   }
+  if (menu_drawn_players_[page] != selected_players_) {
+    draw_player_menu(selected_players_);
+    menu_drawn_players_[page] = selected_players_;
+  }
 }
 
 void GameModeTitle::finalize() {
 }
+
+int GameModeTitle::player_count() const { return selected_players_; }
 
 void GameModeTitle::draw_scene() {
   screen_clear(COLOR_BLACK);
@@ -110,10 +127,18 @@ void GameModeTitle::draw_scene() {
   vector_centered("WIRE DRIFT", 30, 6, 2, 2, COLOR_WHITE);
   vector_centered("RACERS", 78, 7, 3, 2, COLOR_CYAN);
   screen_line(152, 122, 360, 122, COLOR_FLOOR);
+  screen_centered_tracking("SELECT PLAYERS", 382, 1, 2, COLOR_WHITE);
 }
 
 void GameModeTitle::draw_prompt(int color) {
-  screen_centered_tracking("PRESS SPACE", 452, 1, 3, color);
+  screen_centered_tracking("SPACE START", 452, 1, 3, color);
+}
+
+void GameModeTitle::draw_player_menu(int players) {
+  screen_centered_tracking("1 PLAYER", 404, 1, 4,
+                           players == 1 ? COLOR_CYAN : COLOR_FLOOR);
+  screen_centered_tracking("2 PLAYERS", 426, 1, 4,
+                           players == 2 ? COLOR_CYAN : COLOR_FLOOR);
 }
 
 void GameModeTitle::clear_garage() {

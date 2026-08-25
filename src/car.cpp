@@ -172,4 +172,10 @@ void Car::render(int page, iocs_color_t color) {
 
 int Car::speed() const { return speed_; }
 
+int Car::angle() const { return angle_; }
+
+int Car::offset() const { return offset_; }
+
+int Car::boost() const { return boost_; }
+
 int Car::lap() const { return lap_; }

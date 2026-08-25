@@ -250,3 +250,18 @@
 - Documented the glyph construction and provenance in `doc/font-origin.md`.
 - Reserved runtime IOCS font retrieval with `_iocs_fntget()` as a possible future path for system messages or Japanese text rather than the primary game UI.
 - Successfully regenerated `telefont.h`, rebuilt `human.sys` with `x68knodos.specs`, and created `dist/wdrfrace.xdf` using the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-25: Race completion, CPU opponent, and gamepad support
+
+- Added one-player and two-player selection to the title screen, selectable with W/S, cursor keys, or either gamepad.
+- Added a lightweight CPU driver for player 2 in one-player mode, using the same `CarInput` and vehicle physics as a human player.
+- Added live three-lap counters for player 1 and player 2 or CPU to the race HUD.
+- Added finish detection after both cars are updated in the same fixed 20 Hz physics step.
+- Added player 1 win, player 2 or CPU win, and same-frame draw outcomes.
+- Added `GAME_MODE_RESULT` and a dedicated `GameModeResult` class for displaying the race outcome and final lap counts.
+- Restyled the result screen to match HOW TO PLAY, using single-stroke vector headings and compact Technical Monoline supporting text.
+- Added IOCS `_iocs_joyget()` support with gamepad port 1 assigned to player 1 and port 2 assigned to player 2.
+- Mapped gamepad directions to acceleration, deceleration, and lateral movement; button 1 to boost; and button 2 to brake.
+- Added gamepad input to title selection, confirmation, HOW TO PLAY, demo exit, and result input handling.
+- Changed result timing so held race controls must first be released before the result timer starts.
+- The result remains visible for at least one second and returns automatically after 100 fixed updates, approximately five seconds at 20 Hz; a new input can skip it after the minimum display period.
