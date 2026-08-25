@@ -40,6 +40,9 @@ class GameModeRace : public GameMode {
   int gate_drawn_active_[2][GATE_COUNT];
   int gate_drawn_lane_[2][GATE_COUNT];
   int tackle_cooldown_;
+  int countdown_frame_;
+  int countdown_drawn_stage_[2];
+  int boost_ready_[PLAYER_COUNT];
 
   void initialize_trig_table();
   void prepare_intro_frame(int frame);
@@ -61,6 +64,8 @@ class GameModeRace : public GameMode {
   void draw_gate(const Vec2s track[2][TRACK_SEGMENTS],
                  int gate, int lane, iocs_color_t color) const;
   void draw_gates(int page, const Vec2s track[2][TRACK_SEGMENTS]);
+  int countdown_stage() const;
+  void draw_countdown(int page);
 
  public:
   GameModeRace();

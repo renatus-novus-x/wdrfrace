@@ -300,6 +300,17 @@
 - Preserved the existing boost gauge, active-gate refill, fixed 20 Hz physics, and incremental two-page rendering.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
 
+## 2026-08-25: Fair-start countdown
+
+- Added a READY, 3, 2, 1, GO countdown after the precomputed race-intro camera sequence.
+- Stops vehicle physics until GO so both players begin from the same simulation frame.
+- Ignores acceleration, steering, braking, and boost effects during the countdown while continuing to scan input state.
+- Requires each human player to release the boost button once before boost can be used, preventing a held pre-start button from producing an immediate boosted launch.
+- Allows one-player CPU boost normally after GO without requiring a synthetic release.
+- Displays each countdown stage in the reserved area above the 3D viewport.
+- Tracks the displayed countdown stage independently for both graphics pages and erases only the previous label during transitions.
+- Adds no full-screen clears and does not change the fixed 20 Hz physics or rendering schedule.
+
 ## 2026-08-25: Drift tackle interaction
 
 - Added lightweight car-to-car contact detection using circular angle distance and lane-offset distance instead of three-dimensional mesh collision.

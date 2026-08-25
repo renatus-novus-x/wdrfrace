@@ -2,6 +2,7 @@
 
 #include "introdat.h"
 #include "screen.h"
+#include "vtext.h"
 
 namespace {
 
@@ -25,6 +26,14 @@ const int TACKLE_CONTACT_OFFSET = 30;
 const int TACKLE_PUSH = 18;
 const int TACKLE_RECOIL = 4;
 const int TACKLE_COOLDOWN_FRAMES = 6;
+const int COUNTDOWN_STEP_FRAMES = 15;
+const int COUNTDOWN_GO_FRAME = COUNTDOWN_STEP_FRAMES * 4;
+const int COUNTDOWN_END_FRAME = COUNTDOWN_GO_FRAME + 10;
+
+const char *countdown_label(int stage) {
+  static const char *labels[] = {"READY", "3", "2", "1", "START"};
+  return labels[stage];
+}
 
 int crossed_angle(int previous, int current, int target) {
   if (previous <= current) return target > previous && target <= current;
@@ -54,7 +63,10 @@ void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
 }  // namespace
 
 GameModeRace::GameModeRace()
-    : player_count_(1), winner_(RACE_WINNER_NONE), tackle_cooldown_(0) {
+    : player_count_(1),
+      winner_(RACE_WINNER_NONE),
+      tackle_cooldown_(0),
+      countdown_frame_(0) {
   for (int page = 0; page < 2; ++page) {
     for (int player = 0; player < PLAYER_COUNT; ++player) {
       lap_drawn_[page][player] = -1;
@@ -64,7 +76,10 @@ GameModeRace::GameModeRace()
       gate_drawn_active_[page][gate] = 0;
       gate_drawn_lane_[page][gate] = 0;
     }
+    countdown_drawn_stage_[page] = -1;
   }
+  boost_ready_[0] = 0;
+  boost_ready_[1] = 0;
 }
 
 void GameModeRace::set_player_count(int players) {
@@ -285,6 +300,33 @@ void GameModeRace::draw_gates(
   }
 }
 
+int GameModeRace::countdown_stage() const {
+  if (intro_frame_ + 1 < INTRO_FRAME_COUNT) return -1;
+  if (countdown_frame_ < COUNTDOWN_STEP_FRAMES) return 0;
+  if (countdown_frame_ < COUNTDOWN_STEP_FRAMES * 2) return 1;
+  if (countdown_frame_ < COUNTDOWN_STEP_FRAMES * 3) return 2;
+  if (countdown_frame_ < COUNTDOWN_GO_FRAME) return 3;
+  if (countdown_frame_ < COUNTDOWN_END_FRAME) return 4;
+  return -1;
+}
+
+void GameModeRace::draw_countdown(int page) {
+  const int stage = countdown_stage();
+  const int previous = countdown_drawn_stage_[page];
+  if (stage == previous) return;
+  if (previous >= 0) {
+    const int scale = previous >= 1 && previous <= 3 ? 8 : 5;
+    vector_centered(countdown_label(previous), 44, scale, 2, 1,
+                    COLOR_BLACK);
+  }
+  if (stage >= 0) {
+    const int scale = stage >= 1 && stage <= 3 ? 8 : 5;
+    vector_centered(countdown_label(stage), 44, scale, 2, 1,
+                    stage == 4 ? COLOR_GATE : COLOR_TRACK);
+  }
+  countdown_drawn_stage_[page] = stage;
+}
+
 void GameModeRace::draw_hud(int page) {
   for (int player = 0; player < PLAYER_COUNT; ++player) {
     const int current_lap = cars_[player].lap();
@@ -341,6 +383,9 @@ int GameModeRace::initialize() {
   intro_drawn_frame_[1] = -1;
   winner_ = RACE_WINNER_NONE;
   tackle_cooldown_ = 0;
+  countdown_frame_ = 0;
+  boost_ready_[0] = 0;
+  boost_ready_[1] = player_count_ == 1;
   for (int gate = 0; gate < GATE_COUNT; ++gate) {
     gates_[gate].angle = (gate + 1) * ANGLE_LIMIT / 4;
     gates_[gate].lane = gate;
@@ -356,6 +401,7 @@ int GameModeRace::initialize() {
       gate_drawn_active_[page][gate] = 0;
       gate_drawn_lane_[page][gate] = 0;
     }
+    countdown_drawn_stage_[page] = -1;
   }
 
   const Vec3f eye = {0.0f, 11.0f, 14.0f};
@@ -375,11 +421,23 @@ GameModeId GameModeRace::update() {
     ++intro_frame_;
     return GAME_MODE_RACE;
   }
+  CarInput player_input[PLAYER_COUNT] = {
+    input_.car_input(0), input_.car_input(1)
+  };
+  for (int player = 0; player < PLAYER_COUNT; ++player) {
+    if (!player_input[player].boost) boost_ready_[player] = 1;
+    if (!boost_ready_[player]) player_input[player].boost = 0;
+  }
+  if (countdown_frame_ < COUNTDOWN_GO_FRAME) {
+    ++countdown_frame_;
+    return GAME_MODE_RACE;
+  }
+  if (countdown_frame_ < COUNTDOWN_END_FRAME) ++countdown_frame_;
   const int previous_angles[PLAYER_COUNT] = {
     cars_[0].angle(), cars_[1].angle()
   };
-  cars_[0].update(input_.car_input(0));
-  cars_[1].update(player_count_ == 1 ? cpu_input() : input_.car_input(1));
+  cars_[0].update(player_input[0]);
+  cars_[1].update(player_count_ == 1 ? cpu_input() : player_input[1]);
   resolve_tackle();
   update_gates(previous_angles);
   const int p1_finished = cars_[0].lap() >= 3;
@@ -404,6 +462,7 @@ void GameModeRace::render(int page) {
       draw_gates(page, kIntroFrames[intro_frame_].track);
     }
     draw_hud(page);
+    draw_countdown(page);
     intro_drawn_frame_[page] = intro_frame_;
     return;
   }
@@ -423,6 +482,7 @@ void GameModeRace::render(int page) {
       draw_gates(page, next.track);
     }
     draw_hud(page);
+    draw_countdown(page);
     intro_drawn_frame_[page] = intro_frame_;
     return;
   }
@@ -441,6 +501,7 @@ void GameModeRace::render(int page) {
   cars_[0].render(page, cars_[0].boosting() ? COLOR_P1_BOOST : COLOR_P1);
   cars_[1].render(page, cars_[1].boosting() ? COLOR_P2_BOOST : COLOR_P2);
   draw_hud(page);
+  draw_countdown(page);
 }
 
 void GameModeRace::finalize() {}
