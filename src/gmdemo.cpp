@@ -2,6 +2,7 @@
 
 #include "demodat.h"
 #include "screen.h"
+#include "vtext.h"
 
 namespace {
 
@@ -20,8 +21,12 @@ const iocs_color_t COLOR_P2 = 0x62bf;
 
 void GameModeDemo::draw_scene() const {
   screen_clear(COLOR_BLACK);
-  screen_centered("DEMO REPLAY", 20, 5, COLOR_CYAN);
-  screen_centered("PRESS ANY KEY", 442, 2, COLOR_WHITE);
+  screen_text_tracking(24, 8, "AUTO REPLAY", 1, 1, COLOR_CYAN);
+  screen_text(466, 8, "02", 1, COLOR_WHITE);
+  screen_line(24, 22, 488, 22, COLOR_TRACK);
+  vector_centered("DEMO REPLAY", 32, 6, 2, 2, COLOR_CYAN);
+  screen_line(176, 82, 336, 82, COLOR_TRACK);
+  screen_centered_tracking("PRESS ANY KEY", 452, 1, 3, COLOR_WHITE);
 }
 
 void GameModeDemo::clear_replay() const {

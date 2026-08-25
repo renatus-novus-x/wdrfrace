@@ -1,6 +1,7 @@
 #include "gmctrl.h"
 
 #include "screen.h"
+#include "vtext.h"
 
 namespace {
 
@@ -14,21 +15,28 @@ const iocs_color_t COLOR_P2 = 0x62bf;
 
 void GameModeControls::draw_screen() const {
   screen_clear(COLOR_BLACK);
-  screen_line(16, 16, 495, 16, COLOR_CYAN);
-  screen_line(495, 16, 495, 463, COLOR_CYAN);
-  screen_line(495, 463, 16, 463, COLOR_CYAN);
-  screen_line(16, 463, 16, 16, COLOR_CYAN);
+  screen_text_tracking(24, 10, "RACE CONTROL", 1, 1, COLOR_CYAN);
+  screen_text(466, 10, "2P", 1, COLOR_WHITE);
+  screen_line(24, 26, 488, 26, COLOR_CYAN);
+  vector_centered("HOW TO PLAY", 40, 6, 2, 2, COLOR_WHITE);
+  screen_line(176, 88, 336, 88, COLOR_CYAN);
 
-  screen_centered("HOW TO PLAY", 40, 5, COLOR_WHITE);
-  screen_centered("PLAYER 1", 108, 4, COLOR_P1);
-  screen_centered("W S  SPEED   A D  DRIFT", 150, 2, COLOR_WHITE);
-  screen_centered("Q  BOOST   E  BRAKE", 178, 2, COLOR_WHITE);
-  screen_centered("PLAYER 2", 226, 4, COLOR_P2);
-  screen_centered("CURSOR KEYS  SPEED DRIFT", 268, 2, COLOR_WHITE);
-  screen_centered("N  BOOST   M  BRAKE", 296, 2, COLOR_WHITE);
-  screen_centered("FIRST TO 3 LAPS", 350, 3, COLOR_CYAN);
-  screen_centered("SPACE START", 398, 3, COLOR_WHITE);
-  screen_centered("ESC TITLE", 430, 2, COLOR_WHITE);
+  vector_centered("PLAYER 1", 108, 4, 2, 1, COLOR_P1);
+  screen_centered_tracking("W S  SPEED   A D  DRIFT", 154, 1, 3,
+                           COLOR_WHITE);
+  screen_centered_tracking("Q  BOOST   E  BRAKE", 180, 1, 3,
+                           COLOR_WHITE);
+  screen_line(64, 210, 448, 210, 0x2109);
+  vector_centered("PLAYER 2", 226, 4, 2, 1, COLOR_P2);
+  screen_centered_tracking("CURSOR KEYS  SPEED DRIFT", 272, 1, 3,
+                           COLOR_WHITE);
+  screen_centered_tracking("N  BOOST   M  BRAKE", 298, 1, 3,
+                           COLOR_WHITE);
+  screen_line(64, 330, 448, 330, 0x2109);
+  vector_centered("FIRST TO 3 LAPS", 348, 4, 1, 1, COLOR_CYAN);
+  screen_centered_tracking("SPACE START", 404, 1, 4, COLOR_WHITE);
+  screen_centered_tracking("ESC TITLE", 434, 1, 3, COLOR_WHITE);
+  screen_line(24, 458, 488, 458, COLOR_CYAN);
 }
 
 int GameModeControls::initialize() {

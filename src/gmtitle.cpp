@@ -4,6 +4,7 @@
 
 #include "herodat.h"
 #include "screen.h"
+#include "vtext.h"
 
 namespace {
 
@@ -103,14 +104,16 @@ void GameModeTitle::finalize() {
 
 void GameModeTitle::draw_scene() {
   screen_clear(COLOR_BLACK);
-  screen_centered("WIRE DRIFT", 22, 5, 0x2108);
-  screen_centered("WIRE DRIFT", 20, 5, COLOR_WHITE);
-  screen_centered("RACERS", 66, 5, 0x2108);
-  screen_centered("RACERS", 64, 5, COLOR_CYAN);
+  screen_text_tracking(24, 8, "VECTOR RACING", 1, 1, COLOR_CYAN);
+  screen_text(466, 8, "01", 1, COLOR_WHITE);
+  screen_line(24, 22, 488, 22, COLOR_FLOOR);
+  vector_centered("WIRE DRIFT", 30, 6, 2, 2, COLOR_WHITE);
+  vector_centered("RACERS", 78, 7, 3, 2, COLOR_CYAN);
+  screen_line(152, 122, 360, 122, COLOR_FLOOR);
 }
 
 void GameModeTitle::draw_prompt(int color) {
-  screen_centered("PRESS SPACE", 442, 2, color);
+  screen_centered_tracking("PRESS SPACE", 452, 1, 3, color);
 }
 
 void GameModeTitle::clear_garage() {

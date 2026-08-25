@@ -227,3 +227,16 @@
 - Confirmed that no per-frame or continuous-animation path performs a full-screen clear.
 - Partial rectangular clears remain at title camera cuts and demo replay camera cuts; these do not clear the full screen.
 - On-device observation showed a dramatic performance improvement after this change.
+
+## 2026-08-25: Technical Monoline and telemetry typography
+
+- Added the reusable `vtext.cpp` / `vtext.h` single-stroke vector font renderer based on IOCS line drawing.
+- Replaced the main title logo with a slanted Technical Monoline `WIRE DRIFT RACERS` design.
+- Added compact telemetry labels and horizontal reference lines to the title, demo replay, and how-to-play screens.
+- Converted `DEMO REPLAY`, `HOW TO PLAY`, player labels, and the lap objective to the vector font.
+- Kept compact supporting text on GVRAM instead of using IOCS `B_PUTMES`, because text VRAM is managed separately from the two GVRAM display pages.
+- Added native-scale 5 x 7 telemetry text with configurable character tracking for prompts and control instructions.
+- Updated `PRESS SPACE`, `PRESS ANY KEY`, and the how-to-play instruction text to use native-size tracked lettering instead of enlarged bitmap glyphs.
+- Fixed the lower edge of `RACERS` being erased by the garage partial clear: the logo now ends at y=120 before the 3D clear region begins at y=124.
+- Reduced both title-line scales and increased the gap between `WIRE DRIFT` and `RACERS` from 2 pixels to 12 pixels without overlapping the 3D region.
+- Successfully rebuilt `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.

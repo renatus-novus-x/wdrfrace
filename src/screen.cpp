@@ -131,6 +131,11 @@ void screen_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
 
 void screen_text(int x, int y, const char *text, int scale,
                  iocs_color_t color) {
+  screen_text_tracking(x, y, text, scale, 0, color);
+}
+
+void screen_text_tracking(int x, int y, const char *text, int scale,
+                          int tracking, iocs_color_t color) {
   while (*text) {
     const uint8_t *rows = glyph(*text++);
     for (int row = 0; row < 7; ++row) {
@@ -141,12 +146,19 @@ void screen_text(int x, int y, const char *text, int scale,
         }
       }
     }
-    x += 6 * scale;
+    x += 6 * scale + tracking;
   }
 }
 
 void screen_centered(const char *text, int y, int scale,
                      iocs_color_t color) {
-  const int width = text_length(text) * 6 * scale - scale;
-  screen_text((FIELD_W - width) / 2, y, text, scale, color);
+  screen_centered_tracking(text, y, scale, 0, color);
+}
+
+void screen_centered_tracking(const char *text, int y, int scale,
+                              int tracking, iocs_color_t color) {
+  const int length = text_length(text);
+  const int width = length * 6 * scale - scale + (length - 1) * tracking;
+  screen_text_tracking((FIELD_W - width) / 2, y, text, scale,
+                       tracking, color);
 }
