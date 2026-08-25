@@ -240,3 +240,13 @@
 - Fixed the lower edge of `RACERS` being erased by the garage partial clear: the logo now ends at y=120 before the 3D clear region begins at y=124.
 - Reduced both title-line scales and increased the gap between `WIRE DRIFT` and `RACERS` from 2 pixels to 12 pixels without overlapping the 3D region.
 - Successfully rebuilt `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-25: Independently generated telemetry bitmap font
+
+- Removed the previous hand-entered 5 x 7 letter and digit bitmap tables from `screen.cpp`.
+- Added `mktele.py`, which defines A-Z and 0-9 as project-owned monoline strokes and rasterizes them to compact 5 x 7 glyphs with an integer line algorithm.
+- Added a Makefile dependency that generates `telefont.h` atomically before compiling `screen.o`.
+- Kept the compact font deterministic across X68000 hardware, ROM versions, and emulators so the telemetry layout and Technical Monoline identity remain consistent.
+- Documented the glyph construction and provenance in `doc/font-origin.md`.
+- Reserved runtime IOCS font retrieval with `_iocs_fntget()` as a possible future path for system messages or Japanese text rather than the primary game UI.
+- Successfully regenerated `telefont.h`, rebuilt `human.sys` with `x68knodos.specs`, and created `dist/wdrfrace.xdf` using the WSL Ubuntu 24.04 elf2x68k toolchain.
