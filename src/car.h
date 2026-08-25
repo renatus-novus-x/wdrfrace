@@ -17,7 +17,7 @@ struct ScreenRect {
 
 class Car {
  private:
-  enum { VERTEX_COUNT = 4, TRIG_TABLE_SIZE = 256 };
+  enum { VERTEX_COUNT = 8, EDGE_COUNT = 12, TRIG_TABLE_SIZE = 256 };
 
   int angle_;
   int offset_;

@@ -265,3 +265,14 @@
 - Added gamepad input to title selection, confirmation, HOW TO PLAY, demo exit, and result input handling.
 - Changed result timing so held race controls must first be released before the result timer starts.
 - The result remains visible for at least one second and returns automatically after 100 fixed updates, approximately five seconds at 20 Hz; a new input can skip it after the minimum display period.
+
+## 2026-08-25: Three-dimensional race and demo car models
+
+- Replaced the flat four-vertex, four-edge race car with a low-profile eight-vertex, twelve-edge wireframe model.
+- Added separate body and roof outlines connected by four pillars, matching the three-dimensional construction used by the title presentation.
+- Updated normal gameplay to project the eight car vertices at runtime while retaining black-line erasure, track repair, and two-page double buffering.
+- Updated `mktitle.py` so all DEMO car vertices remain projected at build time and runtime replay only reads generated screen coordinates.
+- Updated `mkintro.py` so all race-intro car vertices also remain projected at build time.
+- Expanded the generated DEMO and intro data structures with explicit car vertex and edge counts.
+- Kept the track geometry, camera calculations, and physics update rate unchanged so the visual-cost difference can be evaluated independently.
+- Successfully regenerated `demodat.h` and `introdat.h`, rebuilt `human.sys`, and created `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.

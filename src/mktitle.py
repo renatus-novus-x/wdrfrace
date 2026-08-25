@@ -13,7 +13,12 @@ OUTER_RADIUS = 8.8
 TRACK_RADIUS = 7.0
 CAR_HALF_LENGTH = 0.55
 CAR_HALF_WIDTH = 0.32
-CAR_HEIGHT = 0.3
+CAR_BODY_HEIGHT = 0.22
+CAR_ROOF_FRONT_SCALE = 0.46
+CAR_ROOF_REAR_SCALE = 0.60
+CAR_ROOF_WIDTH_SCALE = 0.68
+CAR_ROOF_FRONT_HEIGHT = 0.62
+CAR_ROOF_REAR_HEIGHT = 0.54
 FLAG_CUT = 1
 FLAG_TRACK_MOVED = 2
 
@@ -105,15 +110,29 @@ def make_car_points(angle, lane):
     side_z = cosine * CAR_HALF_WIDTH
     front_x = cosine * CAR_HALF_LENGTH
     front_z = -sine * CAR_HALF_LENGTH
+    roof_side_x = side_x * CAR_ROOF_WIDTH_SCALE
+    roof_side_z = side_z * CAR_ROOF_WIDTH_SCALE
+    roof_front_x = front_x * CAR_ROOF_FRONT_SCALE
+    roof_front_z = front_z * CAR_ROOF_FRONT_SCALE
+    roof_rear_x = front_x * CAR_ROOF_REAR_SCALE
+    roof_rear_z = front_z * CAR_ROOF_REAR_SCALE
     return (
-        (center_x + front_x - side_x, CAR_HEIGHT,
+        (center_x + front_x - side_x, CAR_BODY_HEIGHT,
          center_z + front_z - side_z),
-        (center_x + front_x + side_x, CAR_HEIGHT,
+        (center_x + front_x + side_x, CAR_BODY_HEIGHT,
          center_z + front_z + side_z),
-        (center_x - front_x + side_x, CAR_HEIGHT,
+        (center_x - front_x + side_x, CAR_BODY_HEIGHT,
          center_z - front_z + side_z),
-        (center_x - front_x - side_x, CAR_HEIGHT,
+        (center_x - front_x - side_x, CAR_BODY_HEIGHT,
          center_z - front_z - side_z),
+        (center_x + roof_front_x - roof_side_x, CAR_ROOF_FRONT_HEIGHT,
+         center_z + roof_front_z - roof_side_z),
+        (center_x + roof_front_x + roof_side_x, CAR_ROOF_FRONT_HEIGHT,
+         center_z + roof_front_z + roof_side_z),
+        (center_x - roof_rear_x + roof_side_x, CAR_ROOF_REAR_HEIGHT,
+         center_z - roof_rear_z + roof_side_z),
+        (center_x - roof_rear_x - roof_side_x, CAR_ROOF_REAR_HEIGHT,
+         center_z - roof_rear_z - roof_side_z),
     )
 
 
@@ -169,13 +188,15 @@ def generate():
         "  DEMO_FRAME_COUNT = %d," % FRAME_COUNT,
         "  DEMO_SHOT_LENGTH = %d," % SHOT_LENGTH,
         "  DEMO_TRACK_SEGMENTS = %d," % TRACK_SEGMENTS,
+        "  DEMO_CAR_VERTICES = 8,",
+        "  DEMO_CAR_EDGES = 12,",
         "  DEMO_FLAG_CUT = %d," % FLAG_CUT,
         "  DEMO_FLAG_TRACK_MOVED = %d," % FLAG_TRACK_MOVED,
         "};",
         "",
         "struct DemoFrame {",
         "  Vec2s track[2][DEMO_TRACK_SEGMENTS];",
-        "  Vec2s cars[2][4];",
+        "  Vec2s cars[2][DEMO_CAR_VERTICES];",
         "  unsigned char flags;",
         "};",
         "",

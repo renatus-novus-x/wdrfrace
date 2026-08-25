@@ -44,10 +44,16 @@ void GameModeDemo::draw_ring(const Vec2s *ring,
 
 void GameModeDemo::draw_car(const Vec2s *car,
                             iocs_color_t color) const {
-  for (int i = 0; i < 4; ++i) {
-    const int next = (i + 1) & 3;
-    screen_line(car[i].x, car[i].y,
-                car[next].x, car[next].y, color);
+  static const unsigned char edges[DEMO_CAR_EDGES][2] = {
+    {0, 1}, {1, 2}, {2, 3}, {3, 0},
+    {4, 5}, {5, 6}, {6, 7}, {7, 4},
+    {0, 4}, {1, 5}, {2, 6}, {3, 7},
+  };
+  for (int i = 0; i < DEMO_CAR_EDGES; ++i) {
+    const int a = edges[i][0];
+    const int b = edges[i][1];
+    screen_line(car[a].x, car[a].y,
+                car[b].x, car[b].y, color);
   }
 }
 

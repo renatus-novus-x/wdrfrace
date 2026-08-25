@@ -21,7 +21,12 @@ const float TRACK_RADIUS = 7.0f;
 const float LANE_SCALE = 0.01875f;
 const float CAR_HALF_LENGTH = 0.48f;
 const float CAR_HALF_WIDTH = 0.28f;
-const float CAR_HEIGHT = 0.28f;
+const float CAR_BODY_HEIGHT = 0.22f;
+const float CAR_ROOF_FRONT_SCALE = 0.46f;
+const float CAR_ROOF_REAR_SCALE = 0.60f;
+const float CAR_ROOF_WIDTH_SCALE = 0.68f;
+const float CAR_ROOF_FRONT_HEIGHT = 0.62f;
+const float CAR_ROOF_REAR_HEIGHT = 0.54f;
 const float PROJECTION_SCALE = 300.0f;
 const iocs_color_t COLOR_BLACK = 0x0000;
 
@@ -98,11 +103,29 @@ void Car::prepare_render(const Camera &camera, const float *sin_table) {
   const float side_z = c * CAR_HALF_WIDTH;
   const float front_x = c * CAR_HALF_LENGTH;
   const float front_z = -s * CAR_HALF_LENGTH;
+  const float roof_side_x = side_x * CAR_ROOF_WIDTH_SCALE;
+  const float roof_side_z = side_z * CAR_ROOF_WIDTH_SCALE;
+  const float roof_front_x = front_x * CAR_ROOF_FRONT_SCALE;
+  const float roof_front_z = front_z * CAR_ROOF_FRONT_SCALE;
+  const float roof_rear_x = front_x * CAR_ROOF_REAR_SCALE;
+  const float roof_rear_z = front_z * CAR_ROOF_REAR_SCALE;
   Vec3f points[VERTEX_COUNT] = {
-    {center_x + front_x - side_x, CAR_HEIGHT, center_z + front_z - side_z},
-    {center_x + front_x + side_x, CAR_HEIGHT, center_z + front_z + side_z},
-    {center_x - front_x + side_x, CAR_HEIGHT, center_z - front_z + side_z},
-    {center_x - front_x - side_x, CAR_HEIGHT, center_z - front_z - side_z}
+    {center_x + front_x - side_x, CAR_BODY_HEIGHT,
+     center_z + front_z - side_z},
+    {center_x + front_x + side_x, CAR_BODY_HEIGHT,
+     center_z + front_z + side_z},
+    {center_x - front_x + side_x, CAR_BODY_HEIGHT,
+     center_z - front_z + side_z},
+    {center_x - front_x - side_x, CAR_BODY_HEIGHT,
+     center_z - front_z - side_z},
+    {center_x + roof_front_x - roof_side_x, CAR_ROOF_FRONT_HEIGHT,
+     center_z + roof_front_z - roof_side_z},
+    {center_x + roof_front_x + roof_side_x, CAR_ROOF_FRONT_HEIGHT,
+     center_z + roof_front_z + roof_side_z},
+    {center_x - roof_rear_x + roof_side_x, CAR_ROOF_REAR_HEIGHT,
+     center_z - roof_rear_z + roof_side_z},
+    {center_x - roof_rear_x - roof_side_x, CAR_ROOF_REAR_HEIGHT,
+     center_z - roof_rear_z - roof_side_z}
   };
   for (int i = 0; i < VERTEX_COUNT; ++i) {
     current_visible_[i] = (uint8_t)project(camera, points[i], current_[i]);
@@ -146,11 +169,17 @@ ScreenRect Car::previous_bounds(int page) const {
 
 void Car::draw_wire(const Vec2s *points, const uint8_t *visible,
                     iocs_color_t color) const {
-  for (int i = 0; i < VERTEX_COUNT; ++i) {
-    const int next = (i + 1) & (VERTEX_COUNT - 1);
-    if (visible[i] && visible[next]) {
-      draw_line(points[i].x, points[i].y,
-                points[next].x, points[next].y, color);
+  static const uint8_t edges[EDGE_COUNT][2] = {
+    {0, 1}, {1, 2}, {2, 3}, {3, 0},
+    {4, 5}, {5, 6}, {6, 7}, {7, 4},
+    {0, 4}, {1, 5}, {2, 6}, {3, 7},
+  };
+  for (int i = 0; i < EDGE_COUNT; ++i) {
+    const int a = edges[i][0];
+    const int b = edges[i][1];
+    if (visible[a] && visible[b]) {
+      draw_line(points[a].x, points[a].y,
+                points[b].x, points[b].y, color);
     }
   }
 }

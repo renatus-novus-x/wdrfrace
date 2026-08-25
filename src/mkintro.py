@@ -11,7 +11,12 @@ TRACK_RADIUS = 7.0
 LANE_SCALE = 0.01875
 CAR_HALF_LENGTH = 0.48
 CAR_HALF_WIDTH = 0.28
-CAR_HEIGHT = 0.28
+CAR_BODY_HEIGHT = 0.22
+CAR_ROOF_FRONT_SCALE = 0.46
+CAR_ROOF_REAR_SCALE = 0.60
+CAR_ROOF_WIDTH_SCALE = 0.68
+CAR_ROOF_FRONT_HEIGHT = 0.62
+CAR_ROOF_REAR_HEIGHT = 0.54
 PROJECTION_SCALE = 300.0
 FIELD_W = 512
 FIELD_H = 480
@@ -88,15 +93,29 @@ def make_car_points(offset, trig):
     side_z = cosine * CAR_HALF_WIDTH
     front_x = cosine * CAR_HALF_LENGTH
     front_z = -sine * CAR_HALF_LENGTH
+    roof_side_x = side_x * CAR_ROOF_WIDTH_SCALE
+    roof_side_z = side_z * CAR_ROOF_WIDTH_SCALE
+    roof_front_x = front_x * CAR_ROOF_FRONT_SCALE
+    roof_front_z = front_z * CAR_ROOF_FRONT_SCALE
+    roof_rear_x = front_x * CAR_ROOF_REAR_SCALE
+    roof_rear_z = front_z * CAR_ROOF_REAR_SCALE
     return (
-        (center_x + front_x - side_x, CAR_HEIGHT,
+        (center_x + front_x - side_x, CAR_BODY_HEIGHT,
          center_z + front_z - side_z),
-        (center_x + front_x + side_x, CAR_HEIGHT,
+        (center_x + front_x + side_x, CAR_BODY_HEIGHT,
          center_z + front_z + side_z),
-        (center_x - front_x + side_x, CAR_HEIGHT,
+        (center_x - front_x + side_x, CAR_BODY_HEIGHT,
          center_z - front_z + side_z),
-        (center_x - front_x - side_x, CAR_HEIGHT,
+        (center_x - front_x - side_x, CAR_BODY_HEIGHT,
          center_z - front_z - side_z),
+        (center_x + roof_front_x - roof_side_x, CAR_ROOF_FRONT_HEIGHT,
+         center_z + roof_front_z - roof_side_z),
+        (center_x + roof_front_x + roof_side_x, CAR_ROOF_FRONT_HEIGHT,
+         center_z + roof_front_z + roof_side_z),
+        (center_x - roof_rear_x + roof_side_x, CAR_ROOF_REAR_HEIGHT,
+         center_z - roof_rear_z + roof_side_z),
+        (center_x - roof_rear_x - roof_side_x, CAR_ROOF_REAR_HEIGHT,
+         center_z - roof_rear_z - roof_side_z),
     )
 
 
@@ -152,11 +171,12 @@ def generate():
         "enum {",
         "  INTRO_FRAME_COUNT = %d," % FRAME_COUNT,
         "  INTRO_TRACK_SEGMENTS = %d," % TRACK_SEGMENTS,
+        "  INTRO_CAR_VERTICES = 8,",
         "};",
         "",
         "struct IntroFrame {",
         "  Vec2s track[2][INTRO_TRACK_SEGMENTS];",
-        "  Vec2s cars[2][4];",
+        "  Vec2s cars[2][INTRO_CAR_VERTICES];",
         "};",
         "",
         "static const IntroFrame kIntroFrames[INTRO_FRAME_COUNT] = {",
