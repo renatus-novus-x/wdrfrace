@@ -299,3 +299,17 @@
 - Updated the CPU boost threshold so the CPU can use the expanded boosted speed range.
 - Preserved the existing boost gauge, active-gate refill, fixed 20 Hz physics, and incremental two-page rendering.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-25: Drift tackle interaction
+
+- Added lightweight car-to-car contact detection using circular angle distance and lane-offset distance instead of three-dimensional mesh collision.
+- A car drifting toward the opponent becomes the tackle attacker when both cars enter the contact range.
+- A successful tackle pushes the defender 18 offset units and reduces its speed by 25 percent.
+- The attacker receives a four-unit recoil and a 10-percent speed reduction, preventing risk-free attacks.
+- Simultaneous opposing drifts knock both cars apart and reduce both speeds by 25 percent.
+- Ordinary non-drift contact gives both cars a small separation push and an 8-percent speed reduction.
+- Added extra speed loss when knockback pushes a car against the inner or outer lane limit.
+- Added a six-update contact cooldown to prevent repeated impacts while the cars remain overlapped.
+- Resolves tackles before active-gate claims so a player can push an opponent out of the valid gate lane.
+- Added no wireframe edges, projections, or continuous HUD drawing, keeping the rendering workload unchanged.
+- Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.

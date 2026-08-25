@@ -20,6 +20,11 @@ const int GATE_COOLDOWN_FRAMES = 60;
 const int GATE_BOOST_REWARD = 300;
 const int BOOST_MAX = 1000;
 const int BOOST_GAUGE_SEGMENTS = 8;
+const int TACKLE_CONTACT_ANGLE = 1400;
+const int TACKLE_CONTACT_OFFSET = 30;
+const int TACKLE_PUSH = 18;
+const int TACKLE_RECOIL = 4;
+const int TACKLE_COOLDOWN_FRAMES = 6;
 
 int crossed_angle(int previous, int current, int target) {
   if (previous <= current) return target > previous && target <= current;
@@ -36,6 +41,12 @@ int forward_distance(int from, int to) {
   return (to - from + ANGLE_LIMIT) & (ANGLE_LIMIT - 1);
 }
 
+int angle_distance(int a, int b) {
+  int distance = a > b ? a - b : b - a;
+  if (distance > ANGLE_LIMIT / 2) distance = ANGLE_LIMIT - distance;
+  return distance;
+}
+
 void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
   screen_line(x0, y0, x1, y1, color);
 }
@@ -43,7 +54,7 @@ void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
 }  // namespace
 
 GameModeRace::GameModeRace()
-    : player_count_(1), winner_(RACE_WINNER_NONE) {
+    : player_count_(1), winner_(RACE_WINNER_NONE), tackle_cooldown_(0) {
   for (int page = 0; page < 2; ++page) {
     for (int player = 0; player < PLAYER_COUNT; ++player) {
       lap_drawn_[page][player] = -1;
@@ -209,6 +220,40 @@ void GameModeRace::update_gates(const int *previous_angles) {
   }
 }
 
+void GameModeRace::resolve_tackle() {
+  if (tackle_cooldown_ > 0) {
+    --tackle_cooldown_;
+    return;
+  }
+  if (angle_distance(cars_[0].angle(), cars_[1].angle()) >
+      TACKLE_CONTACT_ANGLE) {
+    return;
+  }
+  int offset_distance = cars_[0].offset() - cars_[1].offset();
+  if (offset_distance < 0) offset_distance = -offset_distance;
+  if (offset_distance > TACKLE_CONTACT_OFFSET) return;
+
+  const int direction_0_to_1 =
+      cars_[1].offset() >= cars_[0].offset() ? 1 : -1;
+  const int p1_attacks = cars_[0].drift() == direction_0_to_1;
+  const int p2_attacks = cars_[1].drift() == -direction_0_to_1;
+
+  if (p1_attacks && p2_attacks) {
+    cars_[0].apply_impact(-direction_0_to_1 * TACKLE_PUSH, 75);
+    cars_[1].apply_impact(direction_0_to_1 * TACKLE_PUSH, 75);
+  } else if (p1_attacks) {
+    cars_[0].apply_impact(-direction_0_to_1 * TACKLE_RECOIL, 90);
+    cars_[1].apply_impact(direction_0_to_1 * TACKLE_PUSH, 75);
+  } else if (p2_attacks) {
+    cars_[1].apply_impact(direction_0_to_1 * TACKLE_RECOIL, 90);
+    cars_[0].apply_impact(-direction_0_to_1 * TACKLE_PUSH, 75);
+  } else {
+    cars_[0].apply_impact(-direction_0_to_1 * TACKLE_RECOIL, 92);
+    cars_[1].apply_impact(direction_0_to_1 * TACKLE_RECOIL, 92);
+  }
+  tackle_cooldown_ = TACKLE_COOLDOWN_FRAMES;
+}
+
 void GameModeRace::draw_gate(
     const Vec2s track[2][TRACK_SEGMENTS], int gate, int lane,
     iocs_color_t color) const {
@@ -295,6 +340,7 @@ int GameModeRace::initialize() {
   intro_drawn_frame_[0] = -1;
   intro_drawn_frame_[1] = -1;
   winner_ = RACE_WINNER_NONE;
+  tackle_cooldown_ = 0;
   for (int gate = 0; gate < GATE_COUNT; ++gate) {
     gates_[gate].angle = (gate + 1) * ANGLE_LIMIT / 4;
     gates_[gate].lane = gate;
@@ -334,6 +380,7 @@ GameModeId GameModeRace::update() {
   };
   cars_[0].update(input_.car_input(0));
   cars_[1].update(player_count_ == 1 ? cpu_input() : input_.car_input(1));
+  resolve_tackle();
   update_gates(previous_angles);
   const int p1_finished = cars_[0].lap() >= 3;
   const int p2_finished = cars_[1].lap() >= 3;

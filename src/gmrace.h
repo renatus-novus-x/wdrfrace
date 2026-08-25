@@ -39,6 +39,7 @@ class GameModeRace : public GameMode {
   ActiveGate gates_[GATE_COUNT];
   int gate_drawn_active_[2][GATE_COUNT];
   int gate_drawn_lane_[2][GATE_COUNT];
+  int tackle_cooldown_;
 
   void initialize_trig_table();
   void prepare_intro_frame(int frame);
@@ -56,6 +57,7 @@ class GameModeRace : public GameMode {
   void draw_hud(int page);
   void draw_boost_gauge(int page, int player);
   void update_gates(const int *previous_angles);
+  void resolve_tackle();
   void draw_gate(const Vec2s track[2][TRACK_SEGMENTS],
                  int gate, int lane, iocs_color_t color) const;
   void draw_gates(int page, const Vec2s track[2][TRACK_SEGMENTS]);

@@ -44,6 +44,7 @@ void Car::initialize(int angle, int offset) {
   speed_ = 0;
   boost_ = BOOST_LIMIT;
   boosting_ = 0;
+  drift_ = 0;
   lap_ = 0;
   for (int page = 0; page < 2; ++page) {
     have_previous_[page] = 0;
@@ -55,6 +56,9 @@ void Car::initialize(int angle, int offset) {
 }
 
 void Car::update(const CarInput &input) {
+  drift_ = 0;
+  if (input.left && !input.right) drift_ = -1;
+  if (input.right && !input.left) drift_ = 1;
   if (input.accelerate) speed_ += ACCELERATION;
   if (input.decelerate) speed_ -= DECELERATION;
   if (input.brake) speed_ -= BRAKE_DECELERATION;
@@ -223,6 +227,23 @@ int Car::offset() const { return offset_; }
 int Car::boost() const { return boost_; }
 
 int Car::boosting() const { return boosting_; }
+
+int Car::drift() const { return drift_; }
+
+void Car::apply_impact(int offset_delta, int speed_percent) {
+  const int target = offset_ + offset_delta;
+  offset_ = target;
+  if (offset_ < -LANE_LIMIT) {
+    offset_ = -LANE_LIMIT;
+    speed_percent -= 15;
+  }
+  if (offset_ > LANE_LIMIT) {
+    offset_ = LANE_LIMIT;
+    speed_percent -= 15;
+  }
+  if (speed_percent < 0) speed_percent = 0;
+  speed_ = speed_ * speed_percent / 100;
+}
 
 void Car::add_boost(int amount) {
   boost_ += amount;
