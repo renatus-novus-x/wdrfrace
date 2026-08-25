@@ -324,3 +324,14 @@
 - Resolves tackles before active-gate claims so a player can push an opponent out of the valid gate lane.
 - Added no wireframe edges, projections, or continuous HUD drawing, keeping the rendering workload unchanged.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-25: Distance-linked catch-up boost recovery
+
+- Added total race-progress comparison using `lap * 65536 + angle` for both cars.
+- Identifies the trailing car after each fixed physics update without changing the leader's vehicle parameters.
+- Applies no assistance when the gap is less than one sixteenth of a lap.
+- Recovers 4 boost points per update beyond one sixteenth of a lap, 8 beyond one eighth, and 12 beyond one quarter.
+- Uses the existing capped `Car::add_boost()` path, so recovery never exceeds the 1000-point boost capacity.
+- Applies the same recovery rules to human and CPU-controlled cars.
+- Leaves maximum speed, acceleration, track geometry, and rendering unchanged; the existing boost gauge displays recovery automatically.
+- Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.

@@ -60,6 +60,7 @@ class GameModeRace : public GameMode {
   void draw_hud(int page);
   void draw_boost_gauge(int page, int player);
   void update_gates(const int *previous_angles);
+  void update_catchup_boost();
   void resolve_tackle();
   void draw_gate(const Vec2s track[2][TRACK_SEGMENTS],
                  int gate, int lane, iocs_color_t color) const;

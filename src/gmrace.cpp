@@ -29,6 +29,9 @@ const int TACKLE_COOLDOWN_FRAMES = 6;
 const int COUNTDOWN_STEP_FRAMES = 15;
 const int COUNTDOWN_GO_FRAME = COUNTDOWN_STEP_FRAMES * 4;
 const int COUNTDOWN_END_FRAME = COUNTDOWN_GO_FRAME + 10;
+const int CATCHUP_GAP_SMALL = ANGLE_LIMIT / 16;
+const int CATCHUP_GAP_MEDIUM = ANGLE_LIMIT / 8;
+const int CATCHUP_GAP_LARGE = ANGLE_LIMIT / 4;
 
 const char *countdown_label(int stage) {
   static const char *labels[] = {"READY", "3", "2", "1", "START"};
@@ -233,6 +236,23 @@ void GameModeRace::update_gates(const int *previous_angles) {
     state.active = 0;
     state.cooldown = GATE_COOLDOWN_FRAMES;
   }
+}
+
+void GameModeRace::update_catchup_boost() {
+  const int progress[PLAYER_COUNT] = {
+    cars_[0].lap() * ANGLE_LIMIT + cars_[0].angle(),
+    cars_[1].lap() * ANGLE_LIMIT + cars_[1].angle()
+  };
+  if (progress[0] == progress[1]) return;
+
+  const int trailing = progress[0] < progress[1] ? 0 : 1;
+  int gap = progress[0] - progress[1];
+  if (gap < 0) gap = -gap;
+  int recovery = 0;
+  if (gap >= CATCHUP_GAP_LARGE) recovery = 12;
+  else if (gap >= CATCHUP_GAP_MEDIUM) recovery = 8;
+  else if (gap >= CATCHUP_GAP_SMALL) recovery = 4;
+  if (recovery > 0) cars_[trailing].add_boost(recovery);
 }
 
 void GameModeRace::resolve_tackle() {
@@ -440,6 +460,7 @@ GameModeId GameModeRace::update() {
   cars_[1].update(player_count_ == 1 ? cpu_input() : player_input[1]);
   resolve_tackle();
   update_gates(previous_angles);
+  update_catchup_boost();
   const int p1_finished = cars_[0].lap() >= 3;
   const int p2_finished = cars_[1].lap() >= 3;
   if (p1_finished || p2_finished) {
