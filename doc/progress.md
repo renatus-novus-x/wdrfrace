@@ -335,3 +335,17 @@
 - Applies the same recovery rules to human and CPU-controlled cars.
 - Leaves maximum speed, acceleration, track geometry, and rendering unchanged; the existing boost gauge displays recovery automatically.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-25: Five-level CPU difficulty and humanized boost control
+
+- Added CPU difficulty levels 1 through 5 for one-player races, with level 3 selected by default.
+- Added CPU-level selection to the title screen using keyboard left/right, A/D, or either gamepad's left/right directions.
+- Passes the selected level through `Application` to both HOW TO PLAY and `GameModeRace`.
+- Displays the selected CPU level on the HOW TO PLAY screen.
+- Replaced the CPU's continuous near-optimal boost input with level-dependent boost bursts and cooldown periods.
+- Stops an active CPU boost burst when the CPU leads by at least one sixteenth of a lap.
+- Adjusts gate-target decision intervals and deterministic targeting error by difficulty level, making lower levels slower to react and less precise.
+- Keeps all CPU levels on the same vehicle physics, boost capacity, speed limits, and catch-up rules as the player.
+- Fixed CPU-level digits accumulating on the title screen by erasing the previous page-specific menu strings in black before drawing the new level.
+- Uses exact text erasure instead of a rectangular clear, preserving the incremental title renderer.
+- Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
