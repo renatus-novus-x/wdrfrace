@@ -23,6 +23,7 @@ class Car {
   int offset_;
   int speed_;
   int boost_;
+  int boosting_;
   int lap_;
   Vec2s previous_[2][VERTEX_COUNT];
   Vec2s current_[VERTEX_COUNT];
@@ -46,6 +47,8 @@ class Car {
   int angle() const;
   int offset() const;
   int boost() const;
+  int boosting() const;
+  void add_boost(int amount);
   int lap() const;
 };
 

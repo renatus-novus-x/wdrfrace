@@ -276,3 +276,26 @@
 - Expanded the generated DEMO and intro data structures with explicit car vertex and edge counts.
 - Kept the track geometry, camera calculations, and physics update rate unchanged so the visual-cost difference can be evaluated independently.
 - Successfully regenerated `demodat.h` and `introdat.h`, rebuilt `human.sys`, and created `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-25: Active boost gates and HUD gauges
+
+- Added three active boost gates at fixed positions around the race track.
+- Each gate activates one of the inner, center, or outer lane regions and rewards the first correctly aligned car to cross it.
+- Added a 300-point boost refill, an approximately three-second cooldown, and lane rotation when a gate reactivates.
+- Added same-step claim resolution without a fixed player bias; an exact tie splits the reward between both cars.
+- Updated the one-player CPU to steer toward the nearest active gate.
+- Added page-aware gate erasure and redraw so gate state changes remain correct with two-page double buffering.
+- Added eight-segment boost gauges below the P1 and P2 or CPU lap counters.
+- Quantized the displayed boost value and redraw only segments whose state changed on each graphics page.
+- Kept the gauges above the 3D viewport so car erasure and track repair cannot damage the HUD.
+
+## 2026-08-25: Stronger boost response and visual feedback
+
+- Separated normal and boosted speed limits so boost changes the actual race speed instead of only consuming the gauge near the normal limit.
+- Set the normal maximum speed to 320 and the boosted maximum speed to 512.
+- Increased boost acceleration to 32 per fixed physics update.
+- Added a gradual 12-point-per-update return from boosted speed to the normal speed range after boost is released.
+- Added high-brightness red and blue car colors while boost is active without adding any wireframe edges.
+- Updated the CPU boost threshold so the CPU can use the expanded boosted speed range.
+- Preserved the existing boost gauge, active-gate refill, fixed 20 Hz physics, and incremental two-page rendering.
+- Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.

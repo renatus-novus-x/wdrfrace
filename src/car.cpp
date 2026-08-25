@@ -7,9 +7,11 @@ namespace {
 const int FIELD_W = 512;
 const int FIELD_H = 480;
 const int ANGLE_LIMIT = 65536;
-const int MAX_SPEED = 384;
+const int NORMAL_MAX_SPEED = 320;
+const int BOOST_MAX_SPEED = 512;
 const int ACCELERATION = 8;
-const int BOOST_ACCELERATION = 18;
+const int BOOST_ACCELERATION = 32;
+const int BOOST_RELEASE_DECELERATION = 12;
 const int DECELERATION = 6;
 const int BRAKE_DECELERATION = 20;
 const int COAST_DECELERATION = 2;
@@ -41,6 +43,7 @@ void Car::initialize(int angle, int offset) {
   offset_ = offset;
   speed_ = 0;
   boost_ = BOOST_LIMIT;
+  boosting_ = 0;
   lap_ = 0;
   for (int page = 0; page < 2; ++page) {
     have_previous_[page] = 0;
@@ -55,16 +58,28 @@ void Car::update(const CarInput &input) {
   if (input.accelerate) speed_ += ACCELERATION;
   if (input.decelerate) speed_ -= DECELERATION;
   if (input.brake) speed_ -= BRAKE_DECELERATION;
-  if (input.boost && boost_ > 0) {
+  boosting_ = input.boost && boost_ > 0;
+  if (boosting_) {
     speed_ += BOOST_ACCELERATION;
     boost_ -= BOOST_COST;
     if (boost_ < 0) boost_ = 0;
   }
-  if (!input.accelerate && !input.boost && speed_ > 0) {
+  if (!input.accelerate && !boosting_ && speed_ > 0) {
     speed_ -= COAST_DECELERATION;
   }
+  if (!boosting_ && speed_ > NORMAL_MAX_SPEED) {
+    speed_ -= BOOST_RELEASE_DECELERATION;
+    if (!input.decelerate && !input.brake && speed_ < NORMAL_MAX_SPEED) {
+      speed_ = NORMAL_MAX_SPEED;
+    }
+  }
   if (speed_ < 0) speed_ = 0;
-  if (speed_ > MAX_SPEED) speed_ = MAX_SPEED;
+  if (boosting_ && speed_ > BOOST_MAX_SPEED) speed_ = BOOST_MAX_SPEED;
+  if (!boosting_ && speed_ > BOOST_MAX_SPEED) speed_ = BOOST_MAX_SPEED;
+  if (!boosting_ && speed_ > NORMAL_MAX_SPEED &&
+      input.decelerate == 0 && input.brake == 0) {
+    /* Preserve a short over-speed coast instead of hard-clamping to 320. */
+  }
 
   if (input.left) offset_ -= LANE_STEP;
   if (input.right) offset_ += LANE_STEP;
@@ -206,5 +221,12 @@ int Car::angle() const { return angle_; }
 int Car::offset() const { return offset_; }
 
 int Car::boost() const { return boost_; }
+
+int Car::boosting() const { return boosting_; }
+
+void Car::add_boost(int amount) {
+  boost_ += amount;
+  if (boost_ > BOOST_LIMIT) boost_ = BOOST_LIMIT;
+}
 
 int Car::lap() const { return lap_; }

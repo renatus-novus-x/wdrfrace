@@ -11,6 +11,30 @@ const iocs_color_t COLOR_BLACK = 0x0000;
 const iocs_color_t COLOR_TRACK = 0xffff;
 const iocs_color_t COLOR_P1 = 0x67d9;
 const iocs_color_t COLOR_P2 = 0x62bf;
+const iocs_color_t COLOR_P1_BOOST = 0xdff7;
+const iocs_color_t COLOR_P2_BOOST = 0xde7f;
+const iocs_color_t COLOR_GATE = 0xf83f;
+const iocs_color_t COLOR_HUD_DIM = 0x2109;
+const int ANGLE_LIMIT = 65536;
+const int GATE_COOLDOWN_FRAMES = 60;
+const int GATE_BOOST_REWARD = 300;
+const int BOOST_MAX = 1000;
+const int BOOST_GAUGE_SEGMENTS = 8;
+
+int crossed_angle(int previous, int current, int target) {
+  if (previous <= current) return target > previous && target <= current;
+  return target > previous || target <= current;
+}
+
+int lane_for_offset(int offset) {
+  if (offset < -21) return 0;
+  if (offset > 21) return 2;
+  return 1;
+}
+
+int forward_distance(int from, int to) {
+  return (to - from + ANGLE_LIMIT) & (ANGLE_LIMIT - 1);
+}
 
 void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
   screen_line(x0, y0, x1, y1, color);
@@ -23,6 +47,11 @@ GameModeRace::GameModeRace()
   for (int page = 0; page < 2; ++page) {
     for (int player = 0; player < PLAYER_COUNT; ++player) {
       lap_drawn_[page][player] = -1;
+      boost_drawn_[page][player] = -1;
+    }
+    for (int gate = 0; gate < GATE_COUNT; ++gate) {
+      gate_drawn_active_[page][gate] = 0;
+      gate_drawn_lane_[page][gate] = 0;
     }
   }
 }
@@ -124,34 +153,140 @@ void GameModeRace::clear_screen() const {
 }
 
 CarInput GameModeRace::cpu_input() const {
-  static const int targets[4] = {-40, 24, 44, -20};
+  static const int lane_offsets[3] = {-42, 0, 42};
   CarInput result = {1, 0, 0, 0, 0, 0};
-  const int target = targets[(cars_[1].angle() >> 14) & 3];
+  int best_distance = ANGLE_LIMIT;
+  int target = 0;
+  for (int gate = 0; gate < GATE_COUNT; ++gate) {
+    if (!gates_[gate].active) continue;
+    const int distance = forward_distance(cars_[1].angle(),
+                                          gates_[gate].angle);
+    if (distance < best_distance) {
+      best_distance = distance;
+      target = lane_offsets[gates_[gate].lane];
+    }
+  }
   if (cars_[1].offset() > target + 4) result.left = 1;
   if (cars_[1].offset() < target - 4) result.right = 1;
-  result.boost = cars_[1].boost() > 0 && cars_[1].speed() < 360;
+  result.boost = cars_[1].boost() > 0 && cars_[1].speed() < 500;
   return result;
+}
+
+void GameModeRace::update_gates(const int *previous_angles) {
+  for (int gate = 0; gate < GATE_COUNT; ++gate) {
+    ActiveGate &state = gates_[gate];
+    if (!state.active) {
+      if (--state.cooldown <= 0) {
+        state.cooldown = 0;
+        state.lane = (state.lane + 1) % 3;
+        state.active = 1;
+      }
+      continue;
+    }
+
+    int claim[PLAYER_COUNT] = {0, 0};
+    for (int player = 0; player < PLAYER_COUNT; ++player) {
+      claim[player] = crossed_angle(previous_angles[player],
+                                    cars_[player].angle(), state.angle) &&
+                      lane_for_offset(cars_[player].offset()) == state.lane;
+    }
+    if (!claim[0] && !claim[1]) continue;
+
+    if (claim[0] && claim[1]) {
+      const int p1_over = forward_distance(state.angle, cars_[0].angle());
+      const int p2_over = forward_distance(state.angle, cars_[1].angle());
+      if (p1_over == p2_over) {
+        cars_[0].add_boost(GATE_BOOST_REWARD / 2);
+        cars_[1].add_boost(GATE_BOOST_REWARD / 2);
+      } else {
+        cars_[p1_over > p2_over ? 0 : 1].add_boost(GATE_BOOST_REWARD);
+      }
+    } else {
+      cars_[claim[0] ? 0 : 1].add_boost(GATE_BOOST_REWARD);
+    }
+    state.active = 0;
+    state.cooldown = GATE_COOLDOWN_FRAMES;
+  }
+}
+
+void GameModeRace::draw_gate(
+    const Vec2s track[2][TRACK_SEGMENTS], int gate, int lane,
+    iocs_color_t color) const {
+  const int segment = gates_[gate].angle * TRACK_SEGMENTS / ANGLE_LIMIT;
+  const Vec2s &inner = track[0][segment];
+  const Vec2s &outer = track[1][segment];
+  const int low = lane * 4 + 1;
+  const int high = lane * 4 + 3;
+  const int x0 = inner.x + (outer.x - inner.x) * low / 12;
+  const int y0 = inner.y + (outer.y - inner.y) * low / 12;
+  const int x1 = inner.x + (outer.x - inner.x) * high / 12;
+  const int y1 = inner.y + (outer.y - inner.y) * high / 12;
+  draw_line(x0, y0, x1, y1, color);
+}
+
+void GameModeRace::draw_gates(
+    int page, const Vec2s track[2][TRACK_SEGMENTS]) {
+  for (int gate = 0; gate < GATE_COUNT; ++gate) {
+    if (gate_drawn_active_[page][gate] &&
+        (!gates_[gate].active ||
+         gate_drawn_lane_[page][gate] != gates_[gate].lane)) {
+      draw_gate(track, gate, gate_drawn_lane_[page][gate], COLOR_BLACK);
+    }
+    if (gates_[gate].active) {
+      draw_gate(track, gate, gates_[gate].lane, COLOR_GATE);
+    }
+    gate_drawn_active_[page][gate] = gates_[gate].active;
+    gate_drawn_lane_[page][gate] = gates_[gate].lane;
+  }
 }
 
 void GameModeRace::draw_hud(int page) {
   for (int player = 0; player < PLAYER_COUNT; ++player) {
     const int current_lap = cars_[player].lap();
-    if (lap_drawn_[page][player] == current_lap) continue;
-    const int x = player == 0 ? 20 : 320;
-    char label[] = "P1 LAP 0 OF 3";
-    label[1] = (char)('1' + player);
-    label[7] = (char)('0' + (current_lap > 3 ? 3 : current_lap));
-    screen_fill(x - 4, 6, 176, 18, COLOR_BLACK);
-    if (player == 1 && player_count_ == 1) {
-      char cpu_label[] = "CPU LAP 0 OF 3";
-      cpu_label[8] = label[7];
-      screen_text_tracking(x, 10, cpu_label, 1, 1, COLOR_P2);
-    } else {
-      screen_text_tracking(x, 10, label, 1, 1,
-                           player == 0 ? COLOR_P1 : COLOR_P2);
+    if (lap_drawn_[page][player] != current_lap) {
+      const int x = player == 0 ? 20 : 320;
+      char label[] = "P1 LAP 0 OF 3";
+      label[1] = (char)('1' + player);
+      label[7] = (char)('0' + (current_lap > 3 ? 3 : current_lap));
+      screen_fill(x - 4, 6, 176, 18, COLOR_BLACK);
+      if (player == 1 && player_count_ == 1) {
+        char cpu_label[] = "CPU LAP 0 OF 3";
+        cpu_label[8] = label[7];
+        screen_text_tracking(x, 10, cpu_label, 1, 1, COLOR_P2);
+      } else {
+        screen_text_tracking(x, 10, label, 1, 1,
+                             player == 0 ? COLOR_P1 : COLOR_P2);
+      }
+      lap_drawn_[page][player] = current_lap;
     }
-    lap_drawn_[page][player] = current_lap;
+    draw_boost_gauge(page, player);
   }
+}
+
+void GameModeRace::draw_boost_gauge(int page, int player) {
+  const int x = player == 0 ? 20 : 320;
+  const int bar_x = x + 42;
+  const int y = 31;
+  int level = (cars_[player].boost() * BOOST_GAUGE_SEGMENTS +
+               BOOST_MAX - 1) / BOOST_MAX;
+  if (level < 0) level = 0;
+  if (level > BOOST_GAUGE_SEGMENTS) level = BOOST_GAUGE_SEGMENTS;
+  const int previous = boost_drawn_[page][player];
+  if (previous == level) return;
+
+  const iocs_color_t active = player == 0 ? COLOR_P1 : COLOR_P2;
+  if (previous < 0) {
+    screen_text_tracking(x, 27, "BOOST", 1, 1, COLOR_HUD_DIM);
+  }
+  for (int segment = 0; segment < BOOST_GAUGE_SEGMENTS; ++segment) {
+    const int was_active = previous >= 0 && segment < previous;
+    const int is_active = segment < level;
+    if (previous >= 0 && was_active == is_active) continue;
+    const int start = bar_x + segment * 12;
+    screen_line(start, y, start + 8, y,
+                is_active ? active : COLOR_HUD_DIM);
+  }
+  boost_drawn_[page][player] = level;
 }
 
 int GameModeRace::initialize() {
@@ -160,9 +295,20 @@ int GameModeRace::initialize() {
   intro_drawn_frame_[0] = -1;
   intro_drawn_frame_[1] = -1;
   winner_ = RACE_WINNER_NONE;
+  for (int gate = 0; gate < GATE_COUNT; ++gate) {
+    gates_[gate].angle = (gate + 1) * ANGLE_LIMIT / 4;
+    gates_[gate].lane = gate;
+    gates_[gate].active = 1;
+    gates_[gate].cooldown = 0;
+  }
   for (int page = 0; page < 2; ++page) {
     for (int player = 0; player < PLAYER_COUNT; ++player) {
       lap_drawn_[page][player] = -1;
+      boost_drawn_[page][player] = -1;
+    }
+    for (int gate = 0; gate < GATE_COUNT; ++gate) {
+      gate_drawn_active_[page][gate] = 0;
+      gate_drawn_lane_[page][gate] = 0;
     }
   }
 
@@ -183,8 +329,12 @@ GameModeId GameModeRace::update() {
     ++intro_frame_;
     return GAME_MODE_RACE;
   }
+  const int previous_angles[PLAYER_COUNT] = {
+    cars_[0].angle(), cars_[1].angle()
+  };
   cars_[0].update(input_.car_input(0));
   cars_[1].update(player_count_ == 1 ? cpu_input() : input_.car_input(1));
+  update_gates(previous_angles);
   const int p1_finished = cars_[0].lap() >= 3;
   const int p2_finished = cars_[1].lap() >= 3;
   if (p1_finished || p2_finished) {
@@ -201,8 +351,11 @@ void GameModeRace::render(int page) {
     clear_screen();
     draw_track(kIntroFrames[intro_frame_].track, COLOR_TRACK);
     prepare_intro_frame(intro_frame_);
-    cars_[0].render(page, COLOR_P1);
-    cars_[1].render(page, COLOR_P2);
+    cars_[0].render(page, cars_[0].boosting() ? COLOR_P1_BOOST : COLOR_P1);
+    cars_[1].render(page, cars_[1].boosting() ? COLOR_P2_BOOST : COLOR_P2);
+    if (intro_frame_ + 1 >= INTRO_FRAME_COUNT) {
+      draw_gates(page, kIntroFrames[intro_frame_].track);
+    }
     draw_hud(page);
     intro_drawn_frame_[page] = intro_frame_;
     return;
@@ -217,8 +370,11 @@ void GameModeRace::render(int page) {
     cars_[1].clear_previous(page);
     draw_track(previous.track, COLOR_BLACK);
     draw_track(next.track, COLOR_TRACK);
-    cars_[0].render(page, COLOR_P1);
-    cars_[1].render(page, COLOR_P2);
+    cars_[0].render(page, cars_[0].boosting() ? COLOR_P1_BOOST : COLOR_P1);
+    cars_[1].render(page, cars_[1].boosting() ? COLOR_P2_BOOST : COLOR_P2);
+    if (intro_frame_ + 1 >= INTRO_FRAME_COUNT) {
+      draw_gates(page, next.track);
+    }
     draw_hud(page);
     intro_drawn_frame_[page] = intro_frame_;
     return;
@@ -234,8 +390,9 @@ void GameModeRace::render(int page) {
   for (int i = 0; i < PLAYER_COUNT; ++i) cars_[i].clear_previous(page);
   repair_track(kIntroFrames[INTRO_FRAME_COUNT - 1].track,
                damage, PLAYER_COUNT);
-  cars_[0].render(page, COLOR_P1);
-  cars_[1].render(page, COLOR_P2);
+  draw_gates(page, kIntroFrames[INTRO_FRAME_COUNT - 1].track);
+  cars_[0].render(page, cars_[0].boosting() ? COLOR_P1_BOOST : COLOR_P1);
+  cars_[1].render(page, cars_[1].boosting() ? COLOR_P2_BOOST : COLOR_P2);
   draw_hud(page);
 }
 
