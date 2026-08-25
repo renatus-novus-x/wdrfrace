@@ -15,6 +15,7 @@ DEPS := $(OBJECTS:.o=.d)
 INTRO_DATA := introdat.h
 DEMO_DATA := demodat.h
 HERO_DATA := herodat.h
+FONT_DATA := telefont.h
 
 PYTHON ?= python3
 CURL ?= curl
@@ -51,6 +52,11 @@ $(TARGET): $(OBJECTS)
 gmrace.o: $(INTRO_DATA)
 gmdemo.o: $(DEMO_DATA)
 gmtitle.o: $(HERO_DATA)
+screen.o: $(FONT_DATA)
+
+$(FONT_DATA): mktele.py
+	$(PYTHON) $< > $@.tmp
+	mv $@.tmp $@
 
 $(INTRO_DATA): mkintro.py
 	$(PYTHON) $< > $@.tmp
