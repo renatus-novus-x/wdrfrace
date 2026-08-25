@@ -143,11 +143,14 @@ void GameModeRace::render(int page) {
   }
 
   if (intro_drawn_frame_[page] != intro_frame_) {
+    const IntroFrame &previous = kIntroFrames[intro_drawn_frame_[page]];
     const IntroFrame &next = kIntroFrames[intro_frame_];
 
-    clear_screen();
-    draw_track(next.track, COLOR_TRACK);
     prepare_intro_frame(intro_frame_);
+    cars_[0].clear_previous(page);
+    cars_[1].clear_previous(page);
+    draw_track(previous.track, COLOR_BLACK);
+    draw_track(next.track, COLOR_TRACK);
     cars_[0].render(page, COLOR_P1);
     cars_[1].render(page, COLOR_P2);
     intro_drawn_frame_[page] = intro_frame_;

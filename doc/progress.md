@@ -218,3 +218,12 @@
 - Fixed demo camera cuts where one page advanced by two frames and skipped the frame carrying `DEMO_FLAG_CUT`; a shot-number change now also forces replay-area reconstruction.
 - Fixed a race-intro path that briefly entered normal gameplay rendering when a page already contained the current intro frame.
 - Rebuilt successfully with the elf2x68k environment on WSL Ubuntu 24.04 and regenerated `dist/wdrfrace.xdf`.
+
+## 2026-08-25: Race intro line erasure optimization
+
+- Replaced the 512 x 480 full-screen clear during continuous race-intro camera animation with page-specific black-line erasure.
+- Each hidden page now erases its previous car and track lines, then draws the current track and cars.
+- Full-screen clearing remains only for the initial setup of each page after entering race mode.
+- Confirmed that no per-frame or continuous-animation path performs a full-screen clear.
+- Partial rectangular clears remain at title camera cuts and demo replay camera cuts; these do not clear the full screen.
+- On-device observation showed a dramatic performance improvement after this change.
