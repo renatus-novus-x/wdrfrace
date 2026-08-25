@@ -141,7 +141,9 @@ int Application::update() {
         next == GAME_MODE_HOW_TO_PLAY) {
       const int players = title_mode_.player_count();
       controls_mode_.set_player_count(players);
+      controls_mode_.set_cpu_level(title_mode_.cpu_level());
       race_mode_.set_player_count(players);
+      race_mode_.set_cpu_level(title_mode_.cpu_level());
     }
     if (current_mode_id_ == GAME_MODE_RACE &&
         next == GAME_MODE_RESULT) {

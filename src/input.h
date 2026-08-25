@@ -29,6 +29,8 @@ class Input {
   int any_key() const;
   int menu_up() const;
   int menu_down() const;
+  int menu_left() const;
+  int menu_right() const;
   CarInput car_input(int player) const;
 };
 

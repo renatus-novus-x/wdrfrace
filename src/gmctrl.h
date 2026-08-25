@@ -8,6 +8,7 @@ class GameModeControls : public GameMode {
  private:
   Input input_;
   int player_count_;
+  int cpu_level_;
   int input_released_;
   int drawn_[2];
 
@@ -16,6 +17,7 @@ class GameModeControls : public GameMode {
  public:
   GameModeControls();
   void set_player_count(int players);
+  void set_cpu_level(int level);
   virtual int initialize();
   virtual GameModeId update();
   virtual void render(int page);

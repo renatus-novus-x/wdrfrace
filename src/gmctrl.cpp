@@ -13,10 +13,16 @@ const iocs_color_t COLOR_P2 = 0x62bf;
 
 }  // namespace
 
-GameModeControls::GameModeControls() : player_count_(1) {}
+GameModeControls::GameModeControls() : player_count_(1), cpu_level_(3) {}
 
 void GameModeControls::set_player_count(int players) {
   player_count_ = players == 2 ? 2 : 1;
+}
+
+void GameModeControls::set_cpu_level(int level) {
+  if (level < 1) level = 1;
+  if (level > 5) level = 5;
+  cpu_level_ = level;
 }
 
 void GameModeControls::draw_screen() const {
@@ -37,8 +43,9 @@ void GameModeControls::draw_screen() const {
   vector_centered("PLAYER 2", 226, 4, 2, 1, COLOR_P2);
   if (player_count_ == 1) {
     screen_centered_tracking("CPU DRIVER", 272, 1, 3, COLOR_WHITE);
-    screen_centered_tracking("AUTOMATIC CONTROL", 298, 1, 3,
-                             COLOR_WHITE);
+    char cpu_level[] = "CPU LEVEL 3";
+    cpu_level[10] = (char)('0' + cpu_level_);
+    screen_centered_tracking(cpu_level, 298, 1, 3, COLOR_WHITE);
   } else {
     screen_centered_tracking("CURSOR KEYS  SPEED DRIFT", 272, 1, 3,
                              COLOR_WHITE);

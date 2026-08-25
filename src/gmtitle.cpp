@@ -34,7 +34,9 @@ void line(const Vec2s &a, const Vec2s &b, int color) {
 GameModeTitle::GameModeTitle()
     : confirm_down_(0),
       direction_down_(0),
+      level_direction_down_(0),
       selected_players_(1),
+      selected_cpu_level_(3),
       prompt_frame_(0),
       prompt_visible_(1),
       idle_frames_(0),
@@ -43,6 +45,7 @@ GameModeTitle::GameModeTitle()
     drawn_frame_[page] = -1;
     prompt_drawn_visible_[page] = -1;
     menu_drawn_players_[page] = 0;
+    menu_drawn_cpu_level_[page] = 0;
     cut_markers_visible_[page] = 0;
   }
 }
@@ -50,6 +53,7 @@ GameModeTitle::GameModeTitle()
 int GameModeTitle::initialize() {
   confirm_down_ = 0;
   direction_down_ = 0;
+  level_direction_down_ = 0;
   prompt_frame_ = 0;
   prompt_visible_ = 1;
   idle_frames_ = 0;
@@ -58,6 +62,7 @@ int GameModeTitle::initialize() {
     drawn_frame_[page] = -1;
     prompt_drawn_visible_[page] = -1;
     menu_drawn_players_[page] = 0;
+    menu_drawn_cpu_level_[page] = 0;
     cut_markers_visible_[page] = 0;
   }
   input_.update();
@@ -72,6 +77,17 @@ GameModeId GameModeTitle::update() {
     if (input_.menu_down()) selected_players_ = 2;
   }
   direction_down_ = direction;
+  const int level_direction = input_.menu_left() || input_.menu_right();
+  if (selected_players_ == 1 && level_direction &&
+      !level_direction_down_) {
+    if (input_.menu_left() && selected_cpu_level_ > 1) {
+      --selected_cpu_level_;
+    }
+    if (input_.menu_right() && selected_cpu_level_ < 5) {
+      ++selected_cpu_level_;
+    }
+  }
+  level_direction_down_ = level_direction;
   const int confirm = input_.confirm();
   if (confirm && !confirm_down_) {
     return GAME_MODE_HOW_TO_PLAY;
@@ -108,9 +124,13 @@ void GameModeTitle::render(int page) {
     draw_prompt(prompt_visible_ ? COLOR_WHITE : COLOR_BLACK);
     prompt_drawn_visible_[page] = prompt_visible_;
   }
-  if (menu_drawn_players_[page] != selected_players_) {
-    draw_player_menu(selected_players_);
+  if (menu_drawn_players_[page] != selected_players_ ||
+      menu_drawn_cpu_level_[page] != selected_cpu_level_) {
+    draw_player_menu(selected_players_, selected_cpu_level_,
+                     menu_drawn_players_[page],
+                     menu_drawn_cpu_level_[page]);
     menu_drawn_players_[page] = selected_players_;
+    menu_drawn_cpu_level_[page] = selected_cpu_level_;
   }
 }
 
@@ -118,6 +138,8 @@ void GameModeTitle::finalize() {
 }
 
 int GameModeTitle::player_count() const { return selected_players_; }
+
+int GameModeTitle::cpu_level() const { return selected_cpu_level_; }
 
 void GameModeTitle::draw_scene() {
   screen_clear(COLOR_BLACK);
@@ -127,15 +149,26 @@ void GameModeTitle::draw_scene() {
   vector_centered("WIRE DRIFT", 30, 6, 2, 2, COLOR_WHITE);
   vector_centered("RACERS", 78, 7, 3, 2, COLOR_CYAN);
   screen_line(152, 122, 360, 122, COLOR_FLOOR);
-  screen_centered_tracking("SELECT PLAYERS", 382, 1, 2, COLOR_WHITE);
+  screen_centered_tracking("UP DOWN MODE  LEFT RIGHT LEVEL", 382, 1, 2,
+                           COLOR_WHITE);
 }
 
 void GameModeTitle::draw_prompt(int color) {
   screen_centered_tracking("SPACE START", 452, 1, 3, color);
 }
 
-void GameModeTitle::draw_player_menu(int players) {
-  screen_centered_tracking("1 PLAYER", 404, 1, 4,
+void GameModeTitle::draw_player_menu(int players, int cpu_level,
+                                     int previous_players,
+                                     int previous_cpu_level) {
+  if (previous_players > 0) {
+    char previous_one_player[] = "1 PLAYER CPU LEVEL 3";
+    previous_one_player[19] = (char)('0' + previous_cpu_level);
+    screen_centered_tracking(previous_one_player, 404, 1, 2, COLOR_BLACK);
+    screen_centered_tracking("2 PLAYERS", 426, 1, 4, COLOR_BLACK);
+  }
+  char one_player[] = "1 PLAYER CPU LEVEL 3";
+  one_player[19] = (char)('0' + cpu_level);
+  screen_centered_tracking(one_player, 404, 1, 2,
                            players == 1 ? COLOR_CYAN : COLOR_FLOOR);
   screen_centered_tracking("2 PLAYERS", 426, 1, 4,
                            players == 2 ? COLOR_CYAN : COLOR_FLOOR);

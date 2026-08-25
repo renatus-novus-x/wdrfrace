@@ -65,6 +65,16 @@ int Input::menu_down() const {
          either_pad_down(JOY_DOWN);
 }
 
+int Input::menu_left() const {
+  return key_down(KEY_LEFT) || key_down(KEY_A) ||
+         either_pad_down(JOY_LEFT);
+}
+
+int Input::menu_right() const {
+  return key_down(KEY_RIGHT) || key_down(KEY_D) ||
+         either_pad_down(JOY_RIGHT);
+}
+
 int Input::any_key() const {
   for (int i = 0; i < KEY_GROUP_COUNT; ++i) {
     if (groups_[i] != 0) return 1;

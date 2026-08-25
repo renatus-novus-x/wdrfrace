@@ -33,6 +33,11 @@ class GameModeRace : public GameMode {
   int intro_frame_;
   int intro_drawn_frame_[2];
   int player_count_;
+  int cpu_level_;
+  int cpu_decision_timer_;
+  int cpu_target_offset_;
+  int cpu_boost_frames_;
+  int cpu_boost_cooldown_;
   RaceWinner winner_;
   int lap_drawn_[2][PLAYER_COUNT];
   int boost_drawn_[2][PLAYER_COUNT];
@@ -56,7 +61,7 @@ class GameModeRace : public GameMode {
   void repair_track(const Vec2s track[2][TRACK_SEGMENTS],
                     const ScreenRect *damage, int damage_count) const;
   void clear_screen() const;
-  CarInput cpu_input() const;
+  CarInput cpu_input();
   void draw_hud(int page);
   void draw_boost_gauge(int page, int player);
   void update_gates(const int *previous_angles);
@@ -71,6 +76,7 @@ class GameModeRace : public GameMode {
  public:
   GameModeRace();
   void set_player_count(int players);
+  void set_cpu_level(int level);
   int player_count() const;
   RaceWinner winner() const;
   int lap(int player) const;

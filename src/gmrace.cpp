@@ -67,6 +67,11 @@ void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
 
 GameModeRace::GameModeRace()
     : player_count_(1),
+      cpu_level_(3),
+      cpu_decision_timer_(0),
+      cpu_target_offset_(0),
+      cpu_boost_frames_(0),
+      cpu_boost_cooldown_(0),
       winner_(RACE_WINNER_NONE),
       tackle_cooldown_(0),
       countdown_frame_(0) {
@@ -87,6 +92,12 @@ GameModeRace::GameModeRace()
 
 void GameModeRace::set_player_count(int players) {
   player_count_ = players == 2 ? 2 : 1;
+}
+
+void GameModeRace::set_cpu_level(int level) {
+  if (level < 1) level = 1;
+  if (level > 5) level = 5;
+  cpu_level_ = level;
 }
 
 int GameModeRace::player_count() const { return player_count_; }
@@ -181,23 +192,62 @@ void GameModeRace::clear_screen() const {
   screen_clear(COLOR_BLACK);
 }
 
-CarInput GameModeRace::cpu_input() const {
+CarInput GameModeRace::cpu_input() {
   static const int lane_offsets[3] = {-42, 0, 42};
+  static const int decision_intervals[5] = {10, 8, 6, 4, 2};
+  static const int target_errors[5] = {18, 12, 8, 4, 0};
+  static const int boost_bursts[5] = {4, 6, 8, 10, 12};
+  static const int boost_cooldowns[5] = {42, 34, 26, 18, 10};
   CarInput result = {1, 0, 0, 0, 0, 0};
-  int best_distance = ANGLE_LIMIT;
-  int target = 0;
-  for (int gate = 0; gate < GATE_COUNT; ++gate) {
-    if (!gates_[gate].active) continue;
-    const int distance = forward_distance(cars_[1].angle(),
-                                          gates_[gate].angle);
-    if (distance < best_distance) {
-      best_distance = distance;
-      target = lane_offsets[gates_[gate].lane];
+  const int level = cpu_level_ - 1;
+  if (cpu_decision_timer_ <= 0) {
+    int best_distance = ANGLE_LIMIT;
+    cpu_target_offset_ = 0;
+    for (int gate = 0; gate < GATE_COUNT; ++gate) {
+      if (!gates_[gate].active) continue;
+      const int distance = forward_distance(cars_[1].angle(),
+                                            gates_[gate].angle);
+      if (distance < best_distance) {
+        best_distance = distance;
+        cpu_target_offset_ = lane_offsets[gates_[gate].lane];
+        const int error = target_errors[level];
+        if (error > 0) {
+          cpu_target_offset_ += ((cars_[1].angle() >> 13) & 1) ?
+                                error : -error;
+        }
+      }
     }
+    cpu_decision_timer_ = decision_intervals[level];
+  } else {
+    --cpu_decision_timer_;
   }
-  if (cars_[1].offset() > target + 4) result.left = 1;
-  if (cars_[1].offset() < target - 4) result.right = 1;
-  result.boost = cars_[1].boost() > 0 && cars_[1].speed() < 500;
+  if (cars_[1].offset() > cpu_target_offset_ + 4) result.left = 1;
+  if (cars_[1].offset() < cpu_target_offset_ - 4) result.right = 1;
+
+  const int player_progress = cars_[0].lap() * ANGLE_LIMIT +
+                              cars_[0].angle();
+  const int cpu_progress = cars_[1].lap() * ANGLE_LIMIT +
+                           cars_[1].angle();
+  const int cpu_far_ahead = cpu_progress - player_progress >=
+                            CATCHUP_GAP_SMALL;
+  if (cpu_boost_frames_ > 0) {
+    if (cpu_far_ahead) {
+      cpu_boost_frames_ = 0;
+      cpu_boost_cooldown_ = boost_cooldowns[level];
+    } else {
+      result.boost = cars_[1].boost() > 0;
+      --cpu_boost_frames_;
+      if (cpu_boost_frames_ == 0) {
+        cpu_boost_cooldown_ = boost_cooldowns[level];
+      }
+    }
+  } else if (cpu_boost_cooldown_ > 0) {
+    --cpu_boost_cooldown_;
+  } else if (!cpu_far_ahead && cars_[1].boost() > 0 &&
+             cars_[1].speed() < 500) {
+    cpu_boost_frames_ = boost_bursts[level] - 1;
+    result.boost = 1;
+  }
   return result;
 }
 
@@ -403,6 +453,10 @@ int GameModeRace::initialize() {
   intro_drawn_frame_[1] = -1;
   winner_ = RACE_WINNER_NONE;
   tackle_cooldown_ = 0;
+  cpu_decision_timer_ = 0;
+  cpu_target_offset_ = 0;
+  cpu_boost_frames_ = 0;
+  cpu_boost_cooldown_ = 0;
   countdown_frame_ = 0;
   boost_ready_[0] = 0;
   boost_ready_[1] = player_count_ == 1;
