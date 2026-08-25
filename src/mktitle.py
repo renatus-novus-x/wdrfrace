@@ -167,6 +167,7 @@ def generate():
         "",
         "enum {",
         "  DEMO_FRAME_COUNT = %d," % FRAME_COUNT,
+        "  DEMO_SHOT_LENGTH = %d," % SHOT_LENGTH,
         "  DEMO_TRACK_SEGMENTS = %d," % TRACK_SEGMENTS,
         "  DEMO_FLAG_CUT = %d," % FLAG_CUT,
         "  DEMO_FLAG_TRACK_MOVED = %d," % FLAG_TRACK_MOVED,

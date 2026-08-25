@@ -24,11 +24,11 @@ class Car {
   int speed_;
   int boost_;
   int lap_;
-  Vec2s previous_[VERTEX_COUNT];
+  Vec2s previous_[2][VERTEX_COUNT];
   Vec2s current_[VERTEX_COUNT];
-  uint8_t previous_visible_[VERTEX_COUNT];
+  uint8_t previous_visible_[2][VERTEX_COUNT];
   uint8_t current_visible_[VERTEX_COUNT];
-  int have_previous_;
+  int have_previous_[2];
 
   int project(const Camera &camera, const Vec3f &point, Vec2s &screen) const;
   void draw_wire(const Vec2s *points, const uint8_t *visible,
@@ -39,9 +39,9 @@ class Car {
   void update(const CarInput &input);
   void prepare_render(const Camera &camera, const float *sin_table);
   void prepare_screen(const Vec2s *points);
-  ScreenRect previous_bounds() const;
-  void clear_previous();
-  void render(iocs_color_t color);
+  ScreenRect previous_bounds(int page) const;
+  void clear_previous(int page);
+  void render(int page, iocs_color_t color);
   int speed() const;
   int lap() const;
 };

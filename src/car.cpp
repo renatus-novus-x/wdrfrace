@@ -1,5 +1,7 @@
 #include "car.h"
 
+#include "screen.h"
+
 namespace {
 
 const int FIELD_W = 512;
@@ -24,14 +26,7 @@ const float PROJECTION_SCALE = 300.0f;
 const iocs_color_t COLOR_BLACK = 0x0000;
 
 void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
-  struct iocs_lineptr line;
-  line.x1 = (short)x0;
-  line.y1 = (short)y0;
-  line.x2 = (short)x1;
-  line.y2 = (short)y1;
-  line.color = color;
-  line.linestyle = 0xffff;
-  _iocs_line(&line);
+  screen_line(x0, y0, x1, y1, color);
 }
 
 }  // namespace
@@ -42,9 +37,11 @@ void Car::initialize(int angle, int offset) {
   speed_ = 0;
   boost_ = BOOST_LIMIT;
   lap_ = 0;
-  have_previous_ = 0;
+  for (int page = 0; page < 2; ++page) {
+    have_previous_[page] = 0;
+    for (int i = 0; i < VERTEX_COUNT; ++i) previous_visible_[page][i] = 0;
+  }
   for (int i = 0; i < VERTEX_COUNT; ++i) {
-    previous_visible_[i] = 0;
     current_visible_[i] = 0;
   }
 }
@@ -119,23 +116,23 @@ void Car::prepare_screen(const Vec2s *points) {
   }
 }
 
-ScreenRect Car::previous_bounds() const {
+ScreenRect Car::previous_bounds(int page) const {
   ScreenRect bounds = {0, 0, 0, 0, 0};
-  if (!have_previous_) return bounds;
+  if (!have_previous_[page]) return bounds;
 
   for (int i = 0; i < VERTEX_COUNT; ++i) {
-    if (!previous_visible_[i]) continue;
+    if (!previous_visible_[page][i]) continue;
     if (!bounds.valid) {
-      bounds.min_x = previous_[i].x;
-      bounds.max_x = previous_[i].x;
-      bounds.min_y = previous_[i].y;
-      bounds.max_y = previous_[i].y;
+      bounds.min_x = previous_[page][i].x;
+      bounds.max_x = previous_[page][i].x;
+      bounds.min_y = previous_[page][i].y;
+      bounds.max_y = previous_[page][i].y;
       bounds.valid = 1;
     } else {
-      if (previous_[i].x < bounds.min_x) bounds.min_x = previous_[i].x;
-      if (previous_[i].x > bounds.max_x) bounds.max_x = previous_[i].x;
-      if (previous_[i].y < bounds.min_y) bounds.min_y = previous_[i].y;
-      if (previous_[i].y > bounds.max_y) bounds.max_y = previous_[i].y;
+      if (previous_[page][i].x < bounds.min_x) bounds.min_x = previous_[page][i].x;
+      if (previous_[page][i].x > bounds.max_x) bounds.max_x = previous_[page][i].x;
+      if (previous_[page][i].y < bounds.min_y) bounds.min_y = previous_[page][i].y;
+      if (previous_[page][i].y > bounds.max_y) bounds.max_y = previous_[page][i].y;
     }
   }
   if (bounds.valid) {
@@ -158,19 +155,19 @@ void Car::draw_wire(const Vec2s *points, const uint8_t *visible,
   }
 }
 
-void Car::clear_previous() {
-  if (have_previous_) {
-    draw_wire(previous_, previous_visible_, COLOR_BLACK);
+void Car::clear_previous(int page) {
+  if (have_previous_[page]) {
+    draw_wire(previous_[page], previous_visible_[page], COLOR_BLACK);
   }
 }
 
-void Car::render(iocs_color_t color) {
+void Car::render(int page, iocs_color_t color) {
   draw_wire(current_, current_visible_, color);
   for (int i = 0; i < VERTEX_COUNT; ++i) {
-    previous_[i] = current_[i];
-    previous_visible_[i] = current_visible_[i];
+    previous_[page][i] = current_[i];
+    previous_visible_[page][i] = current_visible_[i];
   }
-  have_previous_ = 1;
+  have_previous_[page] = 1;
 }
 
 int Car::speed() const { return speed_; }

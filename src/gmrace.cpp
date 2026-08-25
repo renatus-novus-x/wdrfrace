@@ -1,6 +1,7 @@
 #include "gmrace.h"
 
 #include "introdat.h"
+#include "screen.h"
 
 namespace {
 
@@ -12,14 +13,7 @@ const iocs_color_t COLOR_P1 = 0x67d9;
 const iocs_color_t COLOR_P2 = 0x62bf;
 
 void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
-  struct iocs_lineptr line;
-  line.x1 = (short)x0;
-  line.y1 = (short)y0;
-  line.x2 = (short)x1;
-  line.y2 = (short)y1;
-  line.color = color;
-  line.linestyle = 0xffff;
-  _iocs_line(&line);
+  screen_line(x0, y0, x1, y1, color);
 }
 
 }  // namespace
@@ -105,20 +99,14 @@ void GameModeRace::repair_track(
 }
 
 void GameModeRace::clear_screen() const {
-  struct iocs_fillptr rect;
-  rect.x1 = 0;
-  rect.y1 = 0;
-  rect.x2 = FIELD_W - 1;
-  rect.y2 = FIELD_H - 1;
-  rect.color = COLOR_BLACK;
-  _iocs_fill(&rect);
+  screen_clear(COLOR_BLACK);
 }
 
 int GameModeRace::initialize() {
   initialize_trig_table();
   intro_frame_ = 0;
-  intro_drawn_frame_ = 0;
-  intro_changed_ = 0;
+  intro_drawn_frame_[0] = -1;
+  intro_drawn_frame_[1] = -1;
 
   const Vec3f eye = {0.0f, 11.0f, 14.0f};
   const Vec3f target = {0.0f, 0.0f, 0.0f};
@@ -127,21 +115,14 @@ int GameModeRace::initialize() {
 
   cars_[0].initialize(0, -42);
   cars_[1].initialize(0, 42);
-  clear_screen();
-  draw_track(kIntroFrames[0].track, COLOR_TRACK);
-  prepare_intro_frame(0);
-  cars_[0].render(COLOR_P1);
-  cars_[1].render(COLOR_P2);
   return 1;
 }
 
 GameModeId GameModeRace::update() {
   input_.update();
   if (input_.quit()) return GAME_MODE_TITLE;
-  if (intro_drawn_frame_ != intro_frame_) return GAME_MODE_RACE;
   if (intro_frame_ + 1 < INTRO_FRAME_COUNT) {
     ++intro_frame_;
-    intro_changed_ = 1;
     return GAME_MODE_RACE;
   }
   for (int i = 0; i < PLAYER_COUNT; ++i) {
@@ -150,38 +131,41 @@ GameModeId GameModeRace::update() {
   return GAME_MODE_RACE;
 }
 
-void GameModeRace::render() {
-  if (intro_changed_) {
-    const IntroFrame &previous = kIntroFrames[intro_drawn_frame_];
-    const IntroFrame &next = kIntroFrames[intro_frame_];
-
+void GameModeRace::render(int page) {
+  if (intro_drawn_frame_[page] < 0) {
+    clear_screen();
+    draw_track(kIntroFrames[intro_frame_].track, COLOR_TRACK);
     prepare_intro_frame(intro_frame_);
-    for (int i = 0; i < PLAYER_COUNT; ++i) cars_[i].clear_previous();
-
-    draw_start_line(previous.track, COLOR_BLACK);
-    draw_ring(previous.track[0], COLOR_BLACK);
-    draw_ring(next.track[0], COLOR_TRACK);
-    draw_ring(previous.track[1], COLOR_BLACK);
-    draw_ring(next.track[1], COLOR_TRACK);
-    draw_start_line(next.track, COLOR_TRACK);
-
-    cars_[0].render(COLOR_P1);
-    cars_[1].render(COLOR_P2);
-    intro_drawn_frame_ = intro_frame_;
-    intro_changed_ = 0;
+    cars_[0].render(page, COLOR_P1);
+    cars_[1].render(page, COLOR_P2);
+    intro_drawn_frame_[page] = intro_frame_;
     return;
   }
 
+  if (intro_drawn_frame_[page] != intro_frame_) {
+    const IntroFrame &next = kIntroFrames[intro_frame_];
+
+    clear_screen();
+    draw_track(next.track, COLOR_TRACK);
+    prepare_intro_frame(intro_frame_);
+    cars_[0].render(page, COLOR_P1);
+    cars_[1].render(page, COLOR_P2);
+    intro_drawn_frame_[page] = intro_frame_;
+    return;
+  }
+
+  if (intro_frame_ + 1 < INTRO_FRAME_COUNT) return;
+
   ScreenRect damage[PLAYER_COUNT];
   for (int i = 0; i < PLAYER_COUNT; ++i) {
-    damage[i] = cars_[i].previous_bounds();
+    damage[i] = cars_[i].previous_bounds(page);
     cars_[i].prepare_render(camera_, sin_table_);
   }
-  for (int i = 0; i < PLAYER_COUNT; ++i) cars_[i].clear_previous();
+  for (int i = 0; i < PLAYER_COUNT; ++i) cars_[i].clear_previous(page);
   repair_track(kIntroFrames[INTRO_FRAME_COUNT - 1].track,
                damage, PLAYER_COUNT);
-  cars_[0].render(COLOR_P1);
-  cars_[1].render(COLOR_P2);
+  cars_[0].render(page, COLOR_P1);
+  cars_[1].render(page, COLOR_P2);
 }
 
 void GameModeRace::finalize() {}

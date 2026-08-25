@@ -7,6 +7,12 @@ namespace {
 const int FIELD_W = 512;
 const int FIELD_H = 480;
 
+const iocs_color_t kPalette[] = {
+  0x0000, 0xffff, 0x07ff, 0xf83f, 0x39cf, 0x2109, 0x2108,
+  0x7bef, 0x07c1, 0xf801, 0x003f, 0x67d9, 0x62bf, 0x1bc7,
+  0x3dcf, 0xa7e9, 0xdff7, 0x211f, 0x422f, 0xa4bf, 0xde7f,
+};
+
 const uint8_t kDigits[10][7] = {
   {14, 17, 19, 21, 25, 17, 14},
   {4, 12, 4, 4, 4, 4, 14},
@@ -65,6 +71,38 @@ int text_length(const char *text) {
 
 }  // namespace
 
+void screen_palette_initialize() {
+  const int count = sizeof(kPalette) / sizeof(kPalette[0]);
+  for (int i = 0; i < count; ++i) _iocs_gpalet(i, kPalette[i]);
+}
+
+iocs_color_t screen_palette_color(iocs_color_t color) {
+  switch (color) {
+    case 0x0000: return 0;
+    case 0xffff: return 1;
+    case 0x07ff: return 2;
+    case 0xf83f: return 3;
+    case 0x39cf: return 4;
+    case 0x2109: return 5;
+    case 0x2108: return 6;
+    case 0x7bef: return 7;
+    case 0x07c1: return 8;
+    case 0xf801: return 9;
+    case 0x003f: return 10;
+    case 0x67d9: return 11;
+    case 0x62bf: return 12;
+    case 0x1bc7: return 13;
+    case 0x3dcf: return 14;
+    case 0xa7e9: return 15;
+    case 0xdff7: return 16;
+    case 0x211f: return 17;
+    case 0x422f: return 18;
+    case 0xa4bf: return 19;
+    case 0xde7f: return 20;
+    default: return 1;
+  }
+}
+
 void screen_clear(iocs_color_t color) {
   screen_fill(0, 0, FIELD_W, FIELD_H, color);
 }
@@ -76,7 +114,7 @@ void screen_fill(int x, int y, int width, int height, iocs_color_t color) {
   rect.y1 = (short)y;
   rect.x2 = (short)(x + width - 1);
   rect.y2 = (short)(y + height - 1);
-  rect.color = color;
+  rect.color = screen_palette_color(color);
   _iocs_fill(&rect);
 }
 
@@ -86,7 +124,7 @@ void screen_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
   line.y1 = (short)y0;
   line.x2 = (short)x1;
   line.y2 = (short)y1;
-  line.color = color;
+  line.color = screen_palette_color(color);
   line.linestyle = 0xffff;
   _iocs_line(&line);
 }

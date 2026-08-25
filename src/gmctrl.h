@@ -8,13 +8,14 @@ class GameModeControls : public GameMode {
  private:
   Input input_;
   int input_released_;
+  int drawn_[2];
 
   void draw_screen() const;
 
  public:
   virtual int initialize();
   virtual GameModeId update();
-  virtual void render();
+  virtual void render(int page);
   virtual void finalize();
 };
 

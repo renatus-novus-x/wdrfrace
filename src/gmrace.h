@@ -22,8 +22,7 @@ class GameModeRace : public GameMode {
   Input input_;
   float sin_table_[TRIG_TABLE_SIZE];
   int intro_frame_;
-  int intro_drawn_frame_;
-  int intro_changed_;
+  int intro_drawn_frame_[2];
 
   void initialize_trig_table();
   void prepare_intro_frame(int frame);
@@ -41,7 +40,7 @@ class GameModeRace : public GameMode {
  public:
   virtual int initialize();
   virtual GameModeId update();
-  virtual void render();
+  virtual void render(int page);
   virtual void finalize();
 };
 

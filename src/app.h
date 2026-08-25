@@ -19,6 +19,8 @@ class Application {
   struct iocs_time previous_time_;
   uint16_t frame_accumulator_cs_;
   int render_due_;
+  int front_page_;
+  int back_page_;
   GameModeId current_mode_id_;
   GameMode *current_mode_;
   GameModeTitle title_mode_;
@@ -28,6 +30,7 @@ class Application {
   GameModeRace race_mode_;
 
   GameMode *mode_for(GameModeId id);
+  int initialize_current_mode();
 
  public:
   int initialize();

@@ -6,6 +6,6 @@ int GameMode::initialize() { return 1; }
 
 GameModeId GameMode::update() { return GAME_MODE_EXIT; }
 
-void GameMode::render() {}
+void GameMode::render(int) {}
 
 void GameMode::finalize() {}

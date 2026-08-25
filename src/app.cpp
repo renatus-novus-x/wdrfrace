@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <x68k/iocs.h>
 
+#include "screen.h"
+
 namespace {
 
 const int FIELD_W = 512;
@@ -52,16 +54,6 @@ int set_60hz() {
   return 0;
 }
 
-void clear_screen() {
-  struct iocs_fillptr rect;
-  rect.x1 = 0;
-  rect.y1 = 0;
-  rect.x2 = FIELD_W - 1;
-  rect.y2 = FIELD_H - 1;
-  rect.color = 0x0000;
-  _iocs_fill(&rect);
-}
-
 }  // namespace
 
 GameMode *Application::mode_for(GameModeId id) {
@@ -73,6 +65,22 @@ GameMode *Application::mode_for(GameModeId id) {
   return 0;
 }
 
+int Application::initialize_current_mode() {
+  if (!current_mode_ || !current_mode_->initialize()) return 0;
+
+  _iocs_apage(back_page_);
+  current_mode_->render(back_page_);
+  if (wait_vdisp() != 0) return 0;
+  _iocs_vpage(1 << back_page_);
+  const int old_front = front_page_;
+  front_page_ = back_page_;
+  back_page_ = old_front;
+
+  _iocs_apage(back_page_);
+  current_mode_->render(back_page_);
+  return 1;
+}
+
 int Application::initialize() {
   current_mode_ = 0;
   running_ = 0;
@@ -80,8 +88,14 @@ int Application::initialize() {
   frame_accumulator_cs_ = FIXED_FRAME_STEP_CS;
   render_due_ = 0;
   old_mode_ = _iocs_crtmod(-1);
-  _iocs_crtmod(12);
+  _iocs_crtmod(8);
   _iocs_g_clr_on();
+  _iocs_window(0, 0, FIELD_W - 1, FIELD_H - 1);
+  screen_palette_initialize();
+  front_page_ = 0;
+  back_page_ = 1;
+  _iocs_apage(front_page_);
+  _iocs_vpage(1 << front_page_);
   _iocs_b_curoff();
   if (set_60hz() != 0) {
     finalize();
@@ -89,7 +103,7 @@ int Application::initialize() {
   }
   current_mode_id_ = GAME_MODE_TITLE;
   current_mode_ = mode_for(current_mode_id_);
-  if (!current_mode_ || !current_mode_->initialize()) {
+  if (!initialize_current_mode()) {
     finalize();
     return 0;
   }
@@ -131,7 +145,7 @@ int Application::update() {
       return 0;
     }
     current_mode_ = mode_for(next);
-    running_ = current_mode_ && current_mode_->initialize();
+    running_ = current_mode_ && initialize_current_mode();
     if (!running_) return 0;
   }
 
@@ -140,7 +154,16 @@ int Application::update() {
 
 void Application::render() {
   if (current_mode_ && render_due_) {
-    current_mode_->render();
+    _iocs_apage(back_page_);
+    current_mode_->render(back_page_);
+    if (wait_vdisp() != 0) {
+      running_ = 0;
+      return;
+    }
+    _iocs_vpage(1 << back_page_);
+    const int old_front = front_page_;
+    front_page_ = back_page_;
+    back_page_ = old_front;
     render_due_ = 0;
   }
 }
@@ -150,7 +173,10 @@ void Application::finalize() {
     current_mode_->finalize();
     current_mode_ = 0;
   }
-  clear_screen();
+  _iocs_apage(0);
+  screen_clear(0x0000);
+  _iocs_apage(1);
+  screen_clear(0x0000);
   _iocs_b_curon();
   int mode = old_mode_;
   if (mode < 0 || mode > 0x7f) mode = 12;

@@ -50,7 +50,9 @@ void GameModeDemo::draw_replay_frame(int previous_frame,
                                      int next_frame) const {
   const DemoFrame &previous = kDemoFrames[previous_frame];
   const DemoFrame &next = kDemoFrames[next_frame];
-  if (next.flags & DEMO_FLAG_CUT) {
+  const int crossed_cut =
+      previous_frame / DEMO_SHOT_LENGTH != next_frame / DEMO_SHOT_LENGTH;
+  if ((next.flags & DEMO_FLAG_CUT) || crossed_cut) {
     clear_replay();
     draw_ring(next.track[0], COLOR_TRACK);
     draw_ring(next.track[1], COLOR_TRACK);
@@ -75,14 +77,8 @@ int GameModeDemo::initialize() {
   input_.update();
   input_released_ = !input_.any_key();
   frame_ = 0;
-  drawn_frame_ = 0;
-  frame_changed_ = 0;
-  draw_scene();
-  clear_replay();
-  draw_ring(kDemoFrames[0].track[0], COLOR_TRACK);
-  draw_ring(kDemoFrames[0].track[1], COLOR_TRACK);
-  draw_car(kDemoFrames[0].cars[0], COLOR_P1);
-  draw_car(kDemoFrames[0].cars[1], COLOR_P2);
+  drawn_frame_[0] = -1;
+  drawn_frame_[1] = -1;
   return 1;
 }
 
@@ -94,19 +90,23 @@ GameModeId GameModeDemo::update() {
     return GAME_MODE_TITLE;
   }
 
-  if (drawn_frame_ == frame_) {
-    if (frame_ + 1 >= DEMO_FRAME_COUNT) return GAME_MODE_TITLE;
-    ++frame_;
-    frame_changed_ = 1;
-  }
+  if (frame_ + 1 >= DEMO_FRAME_COUNT) return GAME_MODE_TITLE;
+  ++frame_;
   return GAME_MODE_DEMO;
 }
 
-void GameModeDemo::render() {
-  if (!frame_changed_) return;
-  draw_replay_frame(drawn_frame_, frame_);
-  drawn_frame_ = frame_;
-  frame_changed_ = 0;
+void GameModeDemo::render(int page) {
+  if (drawn_frame_[page] < 0) {
+    draw_scene();
+    clear_replay();
+    draw_ring(kDemoFrames[frame_].track[0], COLOR_TRACK);
+    draw_ring(kDemoFrames[frame_].track[1], COLOR_TRACK);
+    draw_car(kDemoFrames[frame_].cars[0], COLOR_P1);
+    draw_car(kDemoFrames[frame_].cars[1], COLOR_P2);
+  } else if (drawn_frame_[page] != frame_) {
+    draw_replay_frame(drawn_frame_[page], frame_);
+  }
+  drawn_frame_[page] = frame_;
 }
 
 void GameModeDemo::finalize() {}

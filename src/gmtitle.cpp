@@ -25,14 +25,7 @@ void line(const Vec2s &a, const Vec2s &b, int color) {
   if (a.x == HIDDEN_X || b.x == HIDDEN_X) {
     return;
   }
-  struct iocs_lineptr p;
-  p.x1 = a.x;
-  p.y1 = a.y;
-  p.x2 = b.x;
-  p.y2 = b.y;
-  p.color = color;
-  p.linestyle = 0xffff;
-  _iocs_line(&p);
+  screen_line(a.x, a.y, b.x, b.y, color);
 }
 
 }  // namespace
@@ -41,25 +34,27 @@ GameModeTitle::GameModeTitle()
     : confirm_down_(0),
       prompt_frame_(0),
       prompt_visible_(1),
-      prompt_changed_(1),
       idle_frames_(0),
-      frame_(0),
-      drawn_frame_(-1),
-      frame_changed_(1),
-      cut_markers_visible_(0) {}
+      frame_(0) {
+  for (int page = 0; page < 2; ++page) {
+    drawn_frame_[page] = -1;
+    prompt_drawn_visible_[page] = -1;
+    cut_markers_visible_[page] = 0;
+  }
+}
 
 int GameModeTitle::initialize() {
   confirm_down_ = 0;
   prompt_frame_ = 0;
   prompt_visible_ = 1;
-  prompt_changed_ = 1;
   idle_frames_ = 0;
   frame_ = 0;
-  drawn_frame_ = -1;
-  frame_changed_ = 1;
-  cut_markers_visible_ = 0;
+  for (int page = 0; page < 2; ++page) {
+    drawn_frame_[page] = -1;
+    prompt_drawn_visible_[page] = -1;
+    cut_markers_visible_[page] = 0;
+  }
   input_.update();
-  draw_scene();
   return 1;
 }
 
@@ -81,26 +76,25 @@ GameModeId GameModeTitle::update() {
   if (prompt_frame_ >= 10) {
     prompt_frame_ = 0;
     prompt_visible_ = !prompt_visible_;
-    prompt_changed_ = 1;
   }
 
-  if (drawn_frame_ == frame_) {
-    frame_ = (frame_ + 1) % HERO_FRAME_COUNT;
-    frame_changed_ = 1;
-  }
+  frame_ = (frame_ + 1) % HERO_FRAME_COUNT;
   return GAME_MODE_TITLE;
 }
 
-void GameModeTitle::render() {
-  if (frame_changed_) {
-    const int previous_index = drawn_frame_ < 0 ? frame_ : drawn_frame_;
-    draw_garage_frame(kHeroFrames[previous_index], kHeroFrames[frame_]);
-    drawn_frame_ = frame_;
-    frame_changed_ = 0;
+void GameModeTitle::render(int page) {
+  if (drawn_frame_[page] < 0) {
+    draw_scene();
+    draw_garage_frame(page, kHeroFrames[frame_], kHeroFrames[frame_]);
+    drawn_frame_[page] = frame_;
+  } else if (drawn_frame_[page] != frame_) {
+    draw_garage_frame(page, kHeroFrames[drawn_frame_[page]],
+                      kHeroFrames[frame_]);
+    drawn_frame_[page] = frame_;
   }
-  if (prompt_changed_) {
+  if (prompt_drawn_visible_[page] != prompt_visible_) {
     draw_prompt(prompt_visible_ ? COLOR_WHITE : COLOR_BLACK);
-    prompt_changed_ = 0;
+    prompt_drawn_visible_[page] = prompt_visible_;
   }
 }
 
@@ -120,11 +114,7 @@ void GameModeTitle::draw_prompt(int color) {
 }
 
 void GameModeTitle::clear_garage() {
-  for (int y = 124; y <= 393; ++y) {
-    Vec2s a = {16, (short)y};
-    Vec2s b = {495, (short)y};
-    line(a, b, COLOR_BLACK);
-  }
+  screen_fill(16, 124, 480, 270, COLOR_BLACK);
 }
 
 void GameModeTitle::draw_edges(const Vec2s (*edges)[2], int count,
@@ -171,18 +161,18 @@ void GameModeTitle::draw_cut_markers(int color) {
   draw_edges(marker, 8, color);
 }
 
-void GameModeTitle::draw_garage_frame(const HeroFrame &previous,
+void GameModeTitle::draw_garage_frame(int page, const HeroFrame &previous,
                                       const HeroFrame &next) {
-  if (cut_markers_visible_) {
+  if (cut_markers_visible_[page]) {
     draw_cut_markers(COLOR_BLACK);
-    cut_markers_visible_ = 0;
+    cut_markers_visible_[page] = 0;
   }
 
-  if (next.flags & HERO_FLAG_CUT) {
+  if ((next.flags & HERO_FLAG_CUT) || previous.shot != next.shot) {
     clear_garage();
     draw_static_shot(next);
     draw_cut_markers(COLOR_CYAN);
-    cut_markers_visible_ = 1;
+    cut_markers_visible_[page] = 1;
     return;
   }
 

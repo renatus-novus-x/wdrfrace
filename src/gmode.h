@@ -17,7 +17,7 @@ class GameMode {
   virtual ~GameMode();
   virtual int initialize();
   virtual GameModeId update();
-  virtual void render();
+  virtual void render(int page);
   virtual void finalize();
 };
 

@@ -34,7 +34,8 @@ void GameModeControls::draw_screen() const {
 int GameModeControls::initialize() {
   input_.update();
   input_released_ = !input_.confirm();
-  draw_screen();
+  drawn_[0] = 0;
+  drawn_[1] = 0;
   return 1;
 }
 
@@ -49,6 +50,11 @@ GameModeId GameModeControls::update() {
   return GAME_MODE_HOW_TO_PLAY;
 }
 
-void GameModeControls::render() {}
+void GameModeControls::render(int page) {
+  if (!drawn_[page]) {
+    draw_screen();
+    drawn_[page] = 1;
+  }
+}
 
 void GameModeControls::finalize() {}

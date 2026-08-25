@@ -12,7 +12,7 @@ class GameModeTitle : public GameMode {
   GameModeTitle();
   virtual int initialize();
   virtual GameModeId update();
-  virtual void render();
+  virtual void render(int page);
   virtual void finalize();
 
  private:
@@ -25,19 +25,18 @@ class GameModeTitle : public GameMode {
   int car_edge_index(int car, int phase) const;
   void draw_static_shot(const HeroFrame &frame);
   void draw_cut_markers(int color);
-  void draw_garage_frame(const HeroFrame &previous,
+  void draw_garage_frame(int page, const HeroFrame &previous,
                          const HeroFrame &next);
 
   Input input_;
   int confirm_down_;
   int prompt_frame_;
   int prompt_visible_;
-  int prompt_changed_;
   int idle_frames_;
   int frame_;
-  int drawn_frame_;
-  int frame_changed_;
-  int cut_markers_visible_;
+  int drawn_frame_[2];
+  int prompt_drawn_visible_[2];
+  int cut_markers_visible_[2];
 };
 
 #endif

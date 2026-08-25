@@ -12,8 +12,7 @@ class GameModeDemo : public GameMode {
   Input input_;
   int input_released_;
   int frame_;
-  int drawn_frame_;
-  int frame_changed_;
+  int drawn_frame_[2];
 
   void draw_scene() const;
   void clear_replay() const;
@@ -24,7 +23,7 @@ class GameModeDemo : public GameMode {
  public:
   virtual int initialize();
   virtual GameModeId update();
-  virtual void render();
+  virtual void render(int page);
   virtual void finalize();
 };
 

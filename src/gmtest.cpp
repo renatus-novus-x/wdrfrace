@@ -1,5 +1,7 @@
 #include "gmtest.h"
 
+#include "screen.h"
+
 namespace {
 
 const int FIELD_W = 512;
@@ -117,13 +119,7 @@ int GameModeTest::key_down(int scan) const {
 
 void GameModeTest::draw_fill_block(int x1, int y1, int x2, int y2,
                                    iocs_color_t color) const {
-  struct iocs_fillptr rect;
-  rect.x1 = (short)x1;
-  rect.y1 = (short)y1;
-  rect.x2 = (short)x2;
-  rect.y2 = (short)y2;
-  rect.color = color;
-  _iocs_fill(&rect);
+  screen_fill(x1, y1, x2 - x1 + 1, y2 - y1 + 1, color);
 }
 
 void GameModeTest::draw_pixel(int x, int y, iocs_color_t color) const {
@@ -133,14 +129,7 @@ void GameModeTest::draw_pixel(int x, int y, iocs_color_t color) const {
 
 void GameModeTest::draw_line(int x0, int y0, int x1, int y1,
                              iocs_color_t color) const {
-  struct iocs_lineptr line;
-  line.x1 = (short)x0;
-  line.y1 = (short)y0;
-  line.x2 = (short)x1;
-  line.y2 = (short)y1;
-  line.color = color;
-  line.linestyle = 0xffff;
-  _iocs_line(&line);
+  screen_line(x0, y0, x1, y1, color);
 }
 
 void GameModeTest::draw_wire(const Vec2s *points, const uint8_t *visible,
@@ -168,28 +157,29 @@ void GameModeTest::draw_debug_axis() const {
   }
 }
 
-void GameModeTest::erase_previous_frame() {
-  if (!state_.have_prev) return;
-  draw_wire(state_.prev, state_.visible_prev, COLOR_BLACK);
-  if (!debug_axis_visible_prev_[0]) return;
+void GameModeTest::erase_previous_frame(int page) {
+  if (!state_.have_prev[page]) return;
+  draw_wire(state_.prev[page], state_.visible_prev[page], COLOR_BLACK);
+  if (!debug_axis_visible_prev_[page][0]) return;
   for (int i = 1; i < DEBUG_AXIS_POINT_COUNT; ++i) {
-    if (debug_axis_visible_prev_[i]) {
-      draw_line(debug_axis_prev_[0].x, debug_axis_prev_[0].y,
-                debug_axis_prev_[i].x, debug_axis_prev_[i].y, COLOR_BLACK);
+    if (debug_axis_visible_prev_[page][i]) {
+      draw_line(debug_axis_prev_[page][0].x, debug_axis_prev_[page][0].y,
+                debug_axis_prev_[page][i].x, debug_axis_prev_[page][i].y,
+                COLOR_BLACK);
     }
   }
 }
 
-void GameModeTest::save_previous_frame() {
+void GameModeTest::save_previous_frame(int page) {
   for (int i = 0; i < CAR_VERTEX_COUNT; ++i) {
-    state_.prev[i] = state_.next[i];
-    state_.visible_prev[i] = state_.visible_next[i];
+    state_.prev[page][i] = state_.next[i];
+    state_.visible_prev[page][i] = state_.visible_next[i];
   }
   for (int i = 0; i < DEBUG_AXIS_POINT_COUNT; ++i) {
-    debug_axis_prev_[i] = debug_axis_points_[i];
-    debug_axis_visible_prev_[i] = debug_axis_visible_[i];
+    debug_axis_prev_[page][i] = debug_axis_points_[i];
+    debug_axis_visible_prev_[page][i] = debug_axis_visible_[i];
   }
-  state_.have_prev = 1;
+  state_.have_prev[page] = 1;
 }
 
 const uint8_t *GameModeTest::glyph_for_char(char c) const {
@@ -273,7 +263,8 @@ int GameModeTest::initialize() {
   state_.camera_angle = 0.0f;
   update_camera();
   state_.frame = 0;
-  state_.have_prev = 0;
+  state_.have_prev[0] = 0;
+  state_.have_prev[1] = 0;
   state_.fps_count = 0;
   state_.fps_x100 = 0;
   state_.fps_ready = 0;
@@ -281,8 +272,12 @@ int GameModeTest::initialize() {
   debug_toggle_down_ = 0;
   debug_visibility_changed_ = 0;
   fps_updated_ = 0;
-  draw_fill_block(0, 0, FIELD_W - 1, FIELD_H - 1, COLOR_BLACK);
-  draw_fps_hud();
+  for (int page = 0; page < 2; ++page) {
+    page_initialized_[page] = 0;
+    debug_drawn_visible_[page] = -1;
+    fps_drawn_x100_[page] = -1;
+    fps_drawn_ready_[page] = -1;
+  }
   return 1;
 }
 
@@ -303,7 +298,11 @@ GameModeId GameModeTest::update() {
   return GAME_MODE_TEST;
 }
 
-void GameModeTest::render() {
+void GameModeTest::render(int page) {
+  if (!page_initialized_[page]) {
+    draw_fill_block(0, 0, FIELD_W - 1, FIELD_H - 1, COLOR_BLACK);
+    page_initialized_[page] = 1;
+  }
   if (debug_visible_) {
     project_debug_axis();
   } else {
@@ -317,20 +316,24 @@ void GameModeTest::render() {
   }
 
   fps_updated_ = update_fps();
-  erase_previous_frame();
+  erase_previous_frame(page);
   draw_wire(state_.next, state_.visible_next, COLOR_WHITE);
   if (debug_visible_) draw_debug_axis();
-  if (debug_visibility_changed_) {
-    if (debug_visible_) {
-      draw_fps_hud();
-    } else {
+  if (debug_drawn_visible_[page] != debug_visible_) {
+    if (!debug_visible_) {
       draw_fill_block(HUD_X, HUD_Y, HUD_X + HUD_W, HUD_Y + HUD_H,
                       COLOR_BLACK);
     }
-  } else if (debug_visible_ && fps_updated_) {
-    draw_fps_hud();
+    debug_drawn_visible_[page] = debug_visible_;
   }
-  save_previous_frame();
+  if (debug_visible_ &&
+      (fps_drawn_x100_[page] != state_.fps_x100 ||
+       fps_drawn_ready_[page] != state_.fps_ready)) {
+    draw_fps_hud();
+    fps_drawn_x100_[page] = state_.fps_x100;
+    fps_drawn_ready_[page] = state_.fps_ready;
+  }
+  save_previous_frame(page);
   fps_updated_ = 0;
   debug_visibility_changed_ = 0;
 }

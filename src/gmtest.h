@@ -18,12 +18,12 @@ class GameModeTest : public GameMode {
   struct State {
     int frame;
     Vec3f base[CAR_VERTEX_COUNT];
-    Vec2s prev[CAR_VERTEX_COUNT];
+    Vec2s prev[2][CAR_VERTEX_COUNT];
     Vec2s next[CAR_VERTEX_COUNT];
-    uint8_t visible_prev[CAR_VERTEX_COUNT];
+    uint8_t visible_prev[2][CAR_VERTEX_COUNT];
     uint8_t visible_next[CAR_VERTEX_COUNT];
     float camera_angle;
-    int have_prev;
+    int have_prev[2];
     struct iocs_time fps_start;
     int fps_count;
     int fps_x100;
@@ -35,13 +35,17 @@ class GameModeTest : public GameMode {
   float sin_table_[TRIG_TABLE_SIZE];
   Vec3f debug_axis_model_[DEBUG_AXIS_POINT_COUNT];
   Vec2s debug_axis_points_[DEBUG_AXIS_POINT_COUNT];
-  Vec2s debug_axis_prev_[DEBUG_AXIS_POINT_COUNT];
+  Vec2s debug_axis_prev_[2][DEBUG_AXIS_POINT_COUNT];
   uint8_t debug_axis_visible_[DEBUG_AXIS_POINT_COUNT];
-  uint8_t debug_axis_visible_prev_[DEBUG_AXIS_POINT_COUNT];
+  uint8_t debug_axis_visible_prev_[2][DEBUG_AXIS_POINT_COUNT];
   int debug_visible_;
   int debug_toggle_down_;
   int debug_visibility_changed_;
   int fps_updated_;
+  int page_initialized_[2];
+  int debug_drawn_visible_[2];
+  int fps_drawn_x100_[2];
+  int fps_drawn_ready_[2];
 
   void initialize_trig_table();
   int trig_index(float angle) const;
@@ -60,8 +64,8 @@ class GameModeTest : public GameMode {
   void draw_wire(const Vec2s *points, const uint8_t *visible,
                  iocs_color_t color) const;
   void draw_debug_axis() const;
-  void erase_previous_frame();
-  void save_previous_frame();
+  void erase_previous_frame(int page);
+  void save_previous_frame(int page);
   const uint8_t *glyph_for_char(char c) const;
   void draw_glyph(int x, int y, char c, iocs_color_t color) const;
   void draw_text4x5(int x, int y, const char *text,
@@ -72,7 +76,7 @@ class GameModeTest : public GameMode {
  public:
   virtual int initialize();
   virtual GameModeId update();
-  virtual void render();
+  virtual void render(int page);
   virtual void finalize();
 };
 

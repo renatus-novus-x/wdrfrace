@@ -3,6 +3,8 @@
 
 #include <x68k/iocs.h>
 
+void screen_palette_initialize();
+iocs_color_t screen_palette_color(iocs_color_t color);
 void screen_clear(iocs_color_t color);
 void screen_fill(int x, int y, int width, int height, iocs_color_t color);
 void screen_line(int x0, int y0, int x1, int y1, iocs_color_t color);

@@ -204,3 +204,17 @@
 
 - Added `__pycache__/` and `*.py[cod]` to `.gitignore`.
 - Python bytecode caches are generated from the build-time source scripts and are not required to build or run the XDF image.
+
+### 60 Hz double buffering and transition fixes
+
+- Changed the graphics mode from 512x512 65536-color single-page mode to 512x512 256-color two-page mode while retaining the custom 60 Hz CRTC timing.
+- Added `APAGE` back-buffer drawing and VBlank-synchronized `VPAGE` display switching.
+- Added page-specific previous-frame state for title, demo, race, car, and test-mode rendering so each back buffer can be updated incrementally.
+- Added a fixed 21-color palette that preserves the red and blue car gradients, track colors, HUD colors, and debug-axis colors.
+- Restricted IOCS drawing to the 512x480 visible area with `WINDOW(0,0,511,479)`.
+- Replaced title camera-cut erasure with one rectangular clear of the 3D presentation area.
+- Changed the race intro to rebuild the current precomputed frame on the hidden page while keeping normal gameplay on incremental line erasure and repair.
+- Analyzed every frame of the supplied `5.gif` and `6.gif` captures to isolate two double-buffer boundary defects.
+- Fixed demo camera cuts where one page advanced by two frames and skipped the frame carrying `DEMO_FLAG_CUT`; a shot-number change now also forces replay-area reconstruction.
+- Fixed a race-intro path that briefly entered normal gameplay rendering when a page already contained the current intro frame.
+- Rebuilt successfully with the elf2x68k environment on WSL Ubuntu 24.04 and regenerated `dist/wdrfrace.xdf`.
