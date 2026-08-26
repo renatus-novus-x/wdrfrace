@@ -1,5 +1,6 @@
 #include "sound.h"
 
+#include <string.h>
 #include <x68k/iocs.h>
 
 namespace {
@@ -15,7 +16,7 @@ const int kGoalP1Sequence[] = {
   0x4a, 2, 0x4e, 2, 0x5a, 2, 0x6e, 4
 };
 const int kGoalP2Sequence[] = {
-  0x3a, 2, 0x3e, 2, 0x4a, 2, 0x5e, 4
+  0x3a, 2, 0x3e, 2, 0x4a, 4
 };
 const int kGoalDrawSequence[] = {
   0x4a, 2, 0x4e, 2, 0x4a, 2, 0x4e, 4
@@ -23,6 +24,11 @@ const int kGoalDrawSequence[] = {
 
 #define SEQUENCE_LENGTH(sequence) \
   ((int)(sizeof(sequence) / sizeof((sequence)[0]) / 2))
+
+const char *kSoundLabels[] = {
+  "CONFIRM", "CANCEL", "SELECT", "COUNTDOWN", "START",
+  "FINAL LAP", "GOAL P1", "GOAL P2", "GOAL DRAW"
+};
 
 void write_operator(int slot, int multiple, int total_level, int decay) {
   const int offset = slot * 8 + OPM_CHANNEL;
@@ -145,6 +151,30 @@ void SoundEffect::play_goal(int result) {
     start(EFFECT_GOAL_DRAW, kGoalDrawSequence,
           SEQUENCE_LENGTH(kGoalDrawSequence));
   }
+}
+
+int SoundEffect::play(const char *label) {
+  if (!label) return 0;
+  if (strcmp(label, "CONFIRM") == 0) play_confirm();
+  else if (strcmp(label, "CANCEL") == 0) play_cancel();
+  else if (strcmp(label, "SELECT") == 0) play_select();
+  else if (strcmp(label, "COUNTDOWN") == 0) play_countdown();
+  else if (strcmp(label, "START") == 0) play_start();
+  else if (strcmp(label, "FINAL LAP") == 0) play_final_lap();
+  else if (strcmp(label, "GOAL P1") == 0) play_goal(1);
+  else if (strcmp(label, "GOAL P2") == 0) play_goal(2);
+  else if (strcmp(label, "GOAL DRAW") == 0) play_goal(0);
+  else return 0;
+  return 1;
+}
+
+int SoundEffect::label_count() {
+  return sizeof(kSoundLabels) / sizeof(kSoundLabels[0]);
+}
+
+const char *SoundEffect::label_at(int index) {
+  if (index < 0 || index >= label_count()) return 0;
+  return kSoundLabels[index];
 }
 
 void SoundEffect::update() {

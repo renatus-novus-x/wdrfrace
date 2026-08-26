@@ -5,6 +5,7 @@
 
 enum GameModeId {
   GAME_MODE_TEST,
+  GAME_MODE_SE_TEST,
   GAME_MODE_TITLE,
   GAME_MODE_DEMO,
   GAME_MODE_COURSE_SELECT,
@@ -33,6 +34,7 @@ class GameMode {
   virtual GameModeId update();
   virtual int consume_select_sound();
   virtual GameSoundId consume_game_sound();
+  virtual const char *consume_sound_label();
   virtual void render(int page);
   virtual void finalize();
 };

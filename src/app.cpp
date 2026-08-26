@@ -65,7 +65,8 @@ int is_cancel_transition(GameModeId current, GameModeId next) {
   return (current == GAME_MODE_COURSE_SELECT && next == GAME_MODE_TITLE) ||
          (current == GAME_MODE_HOW_TO_PLAY &&
           next == GAME_MODE_COURSE_SELECT) ||
-         (current == GAME_MODE_RACE && next == GAME_MODE_TITLE);
+         (current == GAME_MODE_RACE && next == GAME_MODE_TITLE) ||
+         (current == GAME_MODE_SE_TEST && next == GAME_MODE_TITLE);
 }
 
 void play_game_sound(SoundEffect &sound, GameSoundId game_sound) {
@@ -81,6 +82,7 @@ void play_game_sound(SoundEffect &sound, GameSoundId game_sound) {
 
 GameMode *Application::mode_for(GameModeId id) {
   if (id == GAME_MODE_TITLE) return &title_mode_;
+  if (id == GAME_MODE_SE_TEST) return &sound_test_mode_;
   if (id == GAME_MODE_DEMO) return &demo_mode_;
   if (id == GAME_MODE_COURSE_SELECT) return &course_mode_;
   if (id == GAME_MODE_HOW_TO_PLAY) return &controls_mode_;
@@ -169,6 +171,8 @@ int Application::update() {
 
     GameModeId next = current_mode_->update();
     if (current_mode_->consume_select_sound()) sound_.play_select();
+    const char *sound_label = current_mode_->consume_sound_label();
+    if (sound_label) sound_.play(sound_label);
     play_game_sound(sound_, current_mode_->consume_game_sound());
     if (next == current_mode_id_) continue;
 

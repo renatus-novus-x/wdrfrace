@@ -38,6 +38,9 @@ class SoundEffect {
   void play_start();
   void play_final_lap();
   void play_goal(int result);
+  int play(const char *label);
+  static int label_count();
+  static const char *label_at(int index);
   void finalize();
 };
 

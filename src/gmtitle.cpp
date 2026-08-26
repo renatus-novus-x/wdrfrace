@@ -76,8 +76,11 @@ GameModeId GameModeTitle::update() {
   const int direction = input_.menu_up() || input_.menu_down();
   if (direction && !direction_down_) {
     const int previous_players = selected_players_;
-    if (input_.menu_up()) selected_players_ = 1;
-    if (input_.menu_down()) selected_players_ = 2;
+    if (input_.menu_up()) {
+      selected_players_ = selected_players_ == 1 ? 3 : selected_players_ - 1;
+    } else {
+      selected_players_ = selected_players_ == 3 ? 1 : selected_players_ + 1;
+    }
     if (selected_players_ != previous_players) select_sound_pending_ = 1;
   }
   direction_down_ = direction;
@@ -96,6 +99,7 @@ GameModeId GameModeTitle::update() {
   level_direction_down_ = level_direction;
   const int confirm = input_.confirm();
   if (confirm && !confirm_down_) {
+    if (selected_players_ == 3) return GAME_MODE_SE_TEST;
     return GAME_MODE_COURSE_SELECT;
   }
   confirm_down_ = confirm;
@@ -170,7 +174,7 @@ void GameModeTitle::draw_scene() {
 }
 
 void GameModeTitle::draw_prompt(int color) {
-  screen_centered_tracking("SPACE START", 452, 1, 3, color);
+  screen_centered_tracking("SPACE SELECT", 468, 1, 3, color);
 }
 
 void GameModeTitle::draw_player_menu(int players, int cpu_level,
@@ -179,15 +183,18 @@ void GameModeTitle::draw_player_menu(int players, int cpu_level,
   if (previous_players > 0) {
     char previous_one_player[] = "1 PLAYER CPU LEVEL 3";
     previous_one_player[19] = (char)('0' + previous_cpu_level);
-    screen_centered_tracking(previous_one_player, 404, 1, 2, COLOR_BLACK);
-    screen_centered_tracking("2 PLAYERS", 426, 1, 4, COLOR_BLACK);
+    screen_centered_tracking(previous_one_player, 398, 1, 2, COLOR_BLACK);
+    screen_centered_tracking("2 PLAYERS", 420, 1, 4, COLOR_BLACK);
+    screen_centered_tracking("SOUND TEST", 442, 1, 3, COLOR_BLACK);
   }
   char one_player[] = "1 PLAYER CPU LEVEL 3";
   one_player[19] = (char)('0' + cpu_level);
-  screen_centered_tracking(one_player, 404, 1, 2,
+  screen_centered_tracking(one_player, 398, 1, 2,
                            players == 1 ? COLOR_CYAN : COLOR_FLOOR);
-  screen_centered_tracking("2 PLAYERS", 426, 1, 4,
+  screen_centered_tracking("2 PLAYERS", 420, 1, 4,
                            players == 2 ? COLOR_CYAN : COLOR_FLOOR);
+  screen_centered_tracking("SOUND TEST", 442, 1, 3,
+                           players == 3 ? COLOR_CYAN : COLOR_FLOOR);
 }
 
 void GameModeTitle::clear_garage() {

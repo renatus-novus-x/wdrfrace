@@ -68,8 +68,9 @@ Complete three laps before your opponent.
 ```text
              1 PLAYER  CPU LEVEL 3
                     2 PLAYERS
+                   SOUND TEST
 
-                    SPACE START
+                   SPACE SELECT
 ```
 
 | Action | Keyboard | Gamepad |
@@ -80,12 +81,15 @@ Complete three laps before your opponent.
 
 CPU LEVEL is used in 1 PLAYER. The default setting is LEVEL 3.
 
+Select `SOUND TEST` to audition every in-game sound effect by its label. Use left/right to choose an effect, press `SPACE` or Button 1 to play it, and press `ESC` to return to the title.
+
 If the title screen is left idle, DEMO REPLAY begins. Press any key or use either gamepad to return to the title.
 
 After confirming the mode, the game advances in this order:
 
 ```text
-TITLE  ->  SELECT COURSE  ->  HOW TO PLAY  ->  RACE
+TITLE  ->  1P / 2P  ->  SELECT COURSE  ->  HOW TO PLAY  ->  RACE
+       ->  SOUND TEST  ->  TITLE
 ```
 
 ### HOW TO PLAY Screen
@@ -101,6 +105,8 @@ READY  ->  3  ->  2  ->  1  ->  START
 ```
 
 The cars cannot move before START. Release the boost button once during the countdown. Holding it before START does not give an early boost.
+
+Electronic cues mark `3`, `2`, and `1` at 0.75-second intervals, followed by a rising START cue. A warning sounds when either car enters the final lap, and distinct fanfares identify a P1 win, a P2 or CPU win, and a draw.
 
 ## 4. Course Selection
 
@@ -364,6 +370,8 @@ PAD 1 / PAD 2:
 DIRECTION SPEED AND DRIFT   BUTTON 1 BOOST   BUTTON 2 BRAKE
 
 SELECT COURSE: LEFT / RIGHT   SPACE CONFIRM
+TITLE MENU: UP / DOWN   SPACE SELECT
+SOUND TEST: LEFT / RIGHT   SPACE PLAY   ESC TITLE
 
 FIRST TO 3 LAPS WINS
 ```

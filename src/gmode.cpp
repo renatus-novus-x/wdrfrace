@@ -14,6 +14,8 @@ int GameMode::consume_select_sound() { return 0; }
 
 GameSoundId GameMode::consume_game_sound() { return GAME_SOUND_NONE; }
 
+const char *GameMode::consume_sound_label() { return 0; }
+
 void GameMode::render(int) {}
 
 void GameMode::finalize() {}

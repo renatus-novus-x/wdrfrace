@@ -300,6 +300,16 @@
 - Preserved the existing boost gauge, active-gate refill, fixed 20 Hz physics, and incremental two-page rendering.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
 
+## 2026-08-26: Title-menu sound test and manual synchronization
+
+- Promoted SOUND TEST from a hidden `S`-key shortcut to the third selectable title-menu item.
+- Changed title up/down navigation to cycle through `1 PLAYER`, `2 PLAYERS`, and `SOUND TEST`.
+- Restored `S` as the normal title-menu down input alongside cursor and gamepad navigation.
+- Repositioned all three title choices and changed the prompt to `SPACE SELECT` without overlapping the 3D title viewport.
+- Kept CPU LEVEL adjustment active only while `1 PLAYER` is selected.
+- Documented SOUND TEST discovery and controls in the Japanese and English Markdown, PowerPoint, and PDF manuals.
+- Updated the manuals with real-time countdown cues, final-lap warning audio, and winner-specific goal fanfares.
+
 ## 2026-08-26: Countdown, final-lap, and goal sound effects
 
 - Added a reusable `GameSoundId` event path from game modes through `Application` to the non-blocking YM2151/OPM sound driver.

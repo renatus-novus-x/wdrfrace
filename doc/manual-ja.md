@@ -68,8 +68,9 @@
 ```text
              1 PLAYER  CPU LEVEL 3
                     2 PLAYERS
+                   SOUND TEST
 
-                    SPACE START
+                   SPACE SELECT
 ```
 
 | 操作 | キーボード | ゲームパッド |
@@ -80,12 +81,15 @@
 
 CPU LEVELは1 PLAYERで使用します。初期設定はLEVEL 3です。
 
+`SOUND TEST`を選ぶと、ゲームで使用しているSEをラベル付きで確認できます。左右でSEを選び、`SPACE`またはボタン1で再生します。`ESC`でタイトルへ戻ります。
+
 タイトル画面でしばらく操作しないと、DEMO REPLAYが始まります。いずれかのキーまたはパッドを操作するとタイトルへ戻ります。
 
 モードを決定すると、次の順番でレースへ進みます。
 
 ```text
-TITLE  ->  SELECT COURSE  ->  HOW TO PLAY  ->  RACE
+TITLE  ->  1P / 2P  ->  SELECT COURSE  ->  HOW TO PLAY  ->  RACE
+       ->  SOUND TEST  ->  TITLE
 ```
 
 ### HOW TO PLAY画面
@@ -101,6 +105,8 @@ READY  ->  3  ->  2  ->  1  ->  START
 ```
 
 STARTまではマシンが動きません。ブーストはカウントダウン中に一度ボタンを離してから使用してください。押したまま待っても先行ブーストにはなりません。
+
+`3`、`2`、`1`は0.75秒間隔の電子音で知らせ、`START`では上昇音が鳴ります。どちらかのマシンが最終ラップへ入ると警告音が鳴り、ゴール時は1P、2PまたはCPU、引き分けで異なるファンファーレを再生します。
 
 ## 4. コース選択
 
@@ -364,6 +370,8 @@ PAD 1 / PAD 2:
 DIRECTION SPEED AND DRIFT   BUTTON 1 BOOST   BUTTON 2 BRAKE
 
 SELECT COURSE: LEFT / RIGHT   SPACE CONFIRM
+TITLE MENU: UP / DOWN   SPACE SELECT
+SOUND TEST: LEFT / RIGHT   SPACE PLAY   ESC TITLE
 
 FIRST TO 3 LAPS WINS
 ```

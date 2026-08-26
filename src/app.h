@@ -10,6 +10,7 @@
 #include "gmdemo.h"
 #include "gmrace.h"
 #include "gmresult.h"
+#include "gmsetest.h"
 #include "gmtest.h"
 #include "gmtitle.h"
 #include "sound.h"
@@ -35,6 +36,7 @@ class Application {
   GameModeTest test_mode_;
   GameModeRace race_mode_;
   GameModeResult result_mode_;
+  GameModeSoundTest sound_test_mode_;
   SoundEffect sound_;
 
   GameMode *mode_for(GameModeId id);
