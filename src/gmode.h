@@ -14,13 +14,25 @@ enum GameModeId {
   GAME_MODE_EXIT,
 };
 
+enum GameSoundId {
+  GAME_SOUND_NONE,
+  GAME_SOUND_COUNTDOWN,
+  GAME_SOUND_START,
+  GAME_SOUND_FINAL_LAP,
+  GAME_SOUND_GOAL_P1,
+  GAME_SOUND_GOAL_P2,
+  GAME_SOUND_GOAL_DRAW,
+};
+
 class GameMode {
  public:
   virtual ~GameMode();
   virtual int initialize();
   virtual int initialize_step();
+  virtual void advance_time(int elapsed_cs);
   virtual GameModeId update();
   virtual int consume_select_sound();
+  virtual GameSoundId consume_game_sound();
   virtual void render(int page);
   virtual void finalize();
 };

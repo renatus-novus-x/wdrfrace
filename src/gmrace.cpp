@@ -27,9 +27,9 @@ const int TACKLE_CONTACT_OFFSET = 30;
 const int TACKLE_PUSH = 18;
 const int TACKLE_RECOIL = 4;
 const int TACKLE_COOLDOWN_FRAMES = 6;
-const int COUNTDOWN_STEP_FRAMES = 15;
-const int COUNTDOWN_GO_FRAME = COUNTDOWN_STEP_FRAMES * 4;
-const int COUNTDOWN_END_FRAME = COUNTDOWN_GO_FRAME + 10;
+const int COUNTDOWN_STEP_CS = 75;
+const int COUNTDOWN_GO_CS = COUNTDOWN_STEP_CS * 4;
+const int COUNTDOWN_END_CS = COUNTDOWN_GO_CS + 50;
 const int CATCHUP_GAP_SMALL = ANGLE_LIMIT / 16;
 const int CATCHUP_GAP_MEDIUM = ANGLE_LIMIT / 8;
 const int CATCHUP_GAP_LARGE = ANGLE_LIMIT / 4;
@@ -85,8 +85,9 @@ GameModeRace::GameModeRace()
       course_id_(0),
       winner_(RACE_WINNER_NONE),
       tackle_cooldown_(0),
-      countdown_frame_(0),
-      effect_frame_(0) {
+      countdown_cs_(0),
+      effect_frame_(0),
+      pending_sound_(GAME_SOUND_NONE) {
   for (int page = 0; page < 2; ++page) {
     for (int player = 0; player < PLAYER_COUNT; ++player) {
       lap_drawn_[page][player] = -1;
@@ -430,11 +431,11 @@ void GameModeRace::draw_gates(
 
 int GameModeRace::countdown_stage() const {
   if (intro_frame_ + 1 < INTRO_FRAME_COUNT) return -1;
-  if (countdown_frame_ < COUNTDOWN_STEP_FRAMES) return 0;
-  if (countdown_frame_ < COUNTDOWN_STEP_FRAMES * 2) return 1;
-  if (countdown_frame_ < COUNTDOWN_STEP_FRAMES * 3) return 2;
-  if (countdown_frame_ < COUNTDOWN_GO_FRAME) return 3;
-  if (countdown_frame_ < COUNTDOWN_END_FRAME) return 4;
+  if (countdown_cs_ < COUNTDOWN_STEP_CS) return 0;
+  if (countdown_cs_ < COUNTDOWN_STEP_CS * 2) return 1;
+  if (countdown_cs_ < COUNTDOWN_STEP_CS * 3) return 2;
+  if (countdown_cs_ < COUNTDOWN_GO_CS) return 3;
+  if (countdown_cs_ < COUNTDOWN_END_CS) return 4;
   return -1;
 }
 
@@ -551,8 +552,9 @@ int GameModeRace::initialize() {
   cpu_target_offset_ = 0;
   cpu_boost_frames_ = 0;
   cpu_boost_cooldown_ = 0;
-  countdown_frame_ = 0;
+  countdown_cs_ = 0;
   effect_frame_ = 0;
+  pending_sound_ = GAME_SOUND_NONE;
   boost_ready_[0] = 0;
   boost_ready_[1] = player_count_ == 1;
   for (int player = 0; player < PLAYER_COUNT; ++player) {
@@ -608,6 +610,27 @@ int GameModeRace::initialize_step() {
   return 1;
 }
 
+void GameModeRace::advance_time(int elapsed_cs) {
+  if (elapsed_cs <= 0 || intro_frame_ + 1 < INTRO_FRAME_COUNT ||
+      countdown_cs_ >= COUNTDOWN_END_CS) {
+    return;
+  }
+  const int previous = countdown_cs_;
+  countdown_cs_ += elapsed_cs;
+  if (countdown_cs_ > COUNTDOWN_END_CS) countdown_cs_ = COUNTDOWN_END_CS;
+
+  if (previous < COUNTDOWN_GO_CS && countdown_cs_ >= COUNTDOWN_GO_CS) {
+    pending_sound_ = GAME_SOUND_START;
+  } else if ((previous < COUNTDOWN_STEP_CS &&
+              countdown_cs_ >= COUNTDOWN_STEP_CS) ||
+             (previous < COUNTDOWN_STEP_CS * 2 &&
+              countdown_cs_ >= COUNTDOWN_STEP_CS * 2) ||
+             (previous < COUNTDOWN_STEP_CS * 3 &&
+              countdown_cs_ >= COUNTDOWN_STEP_CS * 3)) {
+    pending_sound_ = GAME_SOUND_COUNTDOWN;
+  }
+}
+
 GameModeId GameModeRace::update() {
   input_.update();
   ++effect_frame_;
@@ -623,16 +646,19 @@ GameModeId GameModeRace::update() {
     if (!player_input[player].boost) boost_ready_[player] = 1;
     if (!boost_ready_[player]) player_input[player].boost = 0;
   }
-  if (countdown_frame_ < COUNTDOWN_GO_FRAME) {
-    ++countdown_frame_;
-    return GAME_MODE_RACE;
-  }
-  if (countdown_frame_ < COUNTDOWN_END_FRAME) ++countdown_frame_;
+  if (countdown_cs_ < COUNTDOWN_GO_CS) return GAME_MODE_RACE;
   const int previous_angles[PLAYER_COUNT] = {
     cars_[0].angle(), cars_[1].angle()
   };
+  const int previous_laps[PLAYER_COUNT] = {
+    cars_[0].lap(), cars_[1].lap()
+  };
   cars_[0].update(player_input[0]);
   cars_[1].update(player_count_ == 1 ? cpu_input() : player_input[1]);
+  if ((previous_laps[0] < 2 && cars_[0].lap() >= 2) ||
+      (previous_laps[1] < 2 && cars_[1].lap() >= 2)) {
+    pending_sound_ = GAME_SOUND_FINAL_LAP;
+  }
   resolve_tackle();
   update_gates(previous_angles);
   update_slipstream();
@@ -640,12 +666,25 @@ GameModeId GameModeRace::update() {
   const int p1_finished = cars_[0].lap() >= 3;
   const int p2_finished = cars_[1].lap() >= 3;
   if (p1_finished || p2_finished) {
-    if (p1_finished && p2_finished) winner_ = RACE_WINNER_DRAW;
-    else if (p1_finished) winner_ = RACE_WINNER_PLAYER_1;
-    else winner_ = RACE_WINNER_PLAYER_2;
+    if (p1_finished && p2_finished) {
+      winner_ = RACE_WINNER_DRAW;
+      pending_sound_ = GAME_SOUND_GOAL_DRAW;
+    } else if (p1_finished) {
+      winner_ = RACE_WINNER_PLAYER_1;
+      pending_sound_ = GAME_SOUND_GOAL_P1;
+    } else {
+      winner_ = RACE_WINNER_PLAYER_2;
+      pending_sound_ = GAME_SOUND_GOAL_P2;
+    }
     return GAME_MODE_RESULT;
   }
   return GAME_MODE_RACE;
+}
+
+GameSoundId GameModeRace::consume_game_sound() {
+  const GameSoundId sound = pending_sound_;
+  pending_sound_ = GAME_SOUND_NONE;
+  return sound;
 }
 
 void GameModeRace::render(int page) {

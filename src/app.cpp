@@ -68,6 +68,15 @@ int is_cancel_transition(GameModeId current, GameModeId next) {
          (current == GAME_MODE_RACE && next == GAME_MODE_TITLE);
 }
 
+void play_game_sound(SoundEffect &sound, GameSoundId game_sound) {
+  if (game_sound == GAME_SOUND_COUNTDOWN) sound.play_countdown();
+  else if (game_sound == GAME_SOUND_START) sound.play_start();
+  else if (game_sound == GAME_SOUND_FINAL_LAP) sound.play_final_lap();
+  else if (game_sound == GAME_SOUND_GOAL_P1) sound.play_goal(1);
+  else if (game_sound == GAME_SOUND_GOAL_P2) sound.play_goal(2);
+  else if (game_sound == GAME_SOUND_GOAL_DRAW) sound.play_goal(0);
+}
+
 }  // namespace
 
 GameMode *Application::mode_for(GameModeId id) {
@@ -140,12 +149,17 @@ int Application::update() {
   long elapsed = ontime_diff_cs(previous_time_, now);
   previous_time_ = now;
   if (elapsed < 0) elapsed = 0;
+  const int mode_elapsed_cs = elapsed > 100 ? 100 : (int)elapsed;
   if (elapsed > MAX_FRAME_CS) elapsed = MAX_FRAME_CS;
   uint16_t frame_dt_cs = (uint16_t)elapsed;
 
   frame_accumulator_cs_ += frame_dt_cs;
   render_due_ = 0;
   const int preparing = mode_initializing_;
+  if (!preparing && !paused_) {
+    current_mode_->advance_time(mode_elapsed_cs);
+    play_game_sound(sound_, current_mode_->consume_game_sound());
+  }
   while (frame_accumulator_cs_ >= FIXED_FRAME_STEP_CS) {
     frame_accumulator_cs_ -= FIXED_FRAME_STEP_CS;
     render_due_ = 1;
@@ -155,6 +169,7 @@ int Application::update() {
 
     GameModeId next = current_mode_->update();
     if (current_mode_->consume_select_sound()) sound_.play_select();
+    play_game_sound(sound_, current_mode_->consume_game_sound());
     if (next == current_mode_id_) continue;
 
     if (is_confirm_transition(current_mode_id_, next)) {

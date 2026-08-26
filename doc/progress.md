@@ -300,6 +300,18 @@
 - Preserved the existing boost gauge, active-gate refill, fixed 20 Hz physics, and incremental two-page rendering.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
 
+## 2026-08-26: Countdown, final-lap, and goal sound effects
+
+- Added a reusable `GameSoundId` event path from game modes through `Application` to the non-blocking YM2151/OPM sound driver.
+- Added short electronic countdown beeps when `3`, `2`, and `1` first appear.
+- Added a brighter rising START sound at the exact fixed update where race controls become active.
+- Added a two-tone final-lap warning when either car enters lap three for the first time.
+- Added distinct goal fanfares for player 1, player 2 or CPU, and a simultaneous-finish draw.
+- Keeps sound register access outside `GameModeRace`, allowing future race effects to reuse the same event interface.
+- Emits each event once at its state transition rather than once per rendered frame.
+- Preserved the fixed 20 Hz simulation, VBlank-stepped mode preparation, and non-blocking page-flip pipeline.
+- Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
 ## 2026-08-26: Course variations and interactive course selection
 
 - Added three selectable course geometries: the balanced circular `RING`, wide `OVAL`, and three-apex `PULSE`.
@@ -397,6 +409,22 @@
 - Uses one shared scale and translation per shot, preserving the original camera composition without frame-to-frame size changes.
 - Emits source bounds, fitted bounds, and scale values as comments in the generated `herodat.h` for future tuning.
 - Adds no runtime projection, geometry, or drawing cost because all adjusted screen coordinates remain precomputed at build time.
+- Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-26: Real-time countdown and data-driven goal fanfare
+
+- Investigated uneven audible spacing between the `3`, `2`, and `1` countdown cues.
+- Identified that countdown timing and sound dispatch were tied to fixed 20 Hz physics updates, which can execute more than once after a delayed render and therefore produce uneven wall-clock spacing.
+- Added `GameMode::advance_time()` so presentation timing can use measured centiseconds independently of fixed-step vehicle physics.
+- Changed the race countdown to advance from real elapsed time immediately after VBlank handling.
+- Triggers `3`, `2`, and `1` at exact 0.75-second boundaries and starts the START cue at the matching control-release boundary.
+- Kept all vehicle input and physics calculations on the existing fixed 20 Hz update path.
+- Replaced hard-coded two-note SE progression with a compact data-driven sequencer using pairs of OPM key codes and 20 Hz note durations.
+- Migrated confirmation, cancellation, selection, countdown, START, and final-lap sounds to the shared sequence format.
+- Replaced the single goal tone with a four-note fanfare lasting approximately 0.5 seconds.
+- Added separate rising fanfare registers for player 1 and player 2 or CPU, plus a neutral alternating phrase for a draw.
+- Keeps goal fanfares free of the previous noise transient so the melody starts cleanly without the unwanted `za` attack.
+- Established the SE sequencer as a base for future sound work while reserving tempo, looping, channel allocation, and SE-priority mixing for a separate BGM driver.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
 
 ## 2026-08-26: Non-blocking menu audio and staged race startup

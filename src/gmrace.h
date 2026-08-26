@@ -51,13 +51,14 @@ class GameModeRace : public GameMode {
   int gate_drawn_active_[2][GATE_COUNT];
   int gate_drawn_lane_[2][GATE_COUNT];
   int tackle_cooldown_;
-  int countdown_frame_;
+  int countdown_cs_;
   int effect_frame_;
   int countdown_drawn_stage_[2];
   int boost_ready_[PLAYER_COUNT];
   int course_drawn_[2];
   int slipstream_frames_[PLAYER_COUNT];
   int slipstream_active_[PLAYER_COUNT];
+  GameSoundId pending_sound_;
 
   int initialize_trig_table_step();
   void prepare_intro_frame(int frame);
@@ -96,7 +97,9 @@ class GameModeRace : public GameMode {
   int lap(int player) const;
   virtual int initialize();
   virtual int initialize_step();
+  virtual void advance_time(int elapsed_cs);
   virtual GameModeId update();
+  virtual GameSoundId consume_game_sound();
   virtual void render(int page);
   virtual void finalize();
 };

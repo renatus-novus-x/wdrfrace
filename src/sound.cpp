@@ -5,15 +5,24 @@
 namespace {
 
 const int OPM_CHANNEL = 7;
-const int CONFIRM_TICKS = 5;
-const int CANCEL_TICKS = 3;
-const int SELECT_TICKS = 2;
-const int CONFIRM_FIRST = 0x5a;
-const int CONFIRM_SECOND = 0x6e;
-const int CANCEL_FIRST = 0x38;
-const int CANCEL_SECOND = 0x2a;
-const int SELECT_FIRST = 0x4e;
-const int SELECT_SECOND = 0x58;
+const int kConfirmSequence[] = {0x5a, 1, 0x6e, 4};
+const int kCancelSequence[] = {0x38, 1, 0x2a, 2};
+const int kSelectSequence[] = {0x4e, 1, 0x58, 1};
+const int kCountdownSequence[] = {0x4a, 2};
+const int kStartSequence[] = {0x4a, 1, 0x6e, 3};
+const int kFinalLapSequence[] = {0x5e, 1, 0x4a, 3};
+const int kGoalP1Sequence[] = {
+  0x4a, 2, 0x4e, 2, 0x5a, 2, 0x6e, 4
+};
+const int kGoalP2Sequence[] = {
+  0x3a, 2, 0x3e, 2, 0x4a, 2, 0x5e, 4
+};
+const int kGoalDrawSequence[] = {
+  0x4a, 2, 0x4e, 2, 0x4a, 2, 0x4e, 4
+};
+
+#define SEQUENCE_LENGTH(sequence) \
+  ((int)(sizeof(sequence) / sizeof((sequence)[0]) / 2))
 
 void write_operator(int slot, int multiple, int total_level, int decay) {
   const int offset = slot * 8 + OPM_CHANNEL;
@@ -28,7 +37,12 @@ void write_operator(int slot, int multiple, int total_level, int decay) {
 }  // namespace
 
 SoundEffect::SoundEffect()
-    : initialized_(0), effect_(EFFECT_NONE), ticks_(0) {}
+    : initialized_(0),
+      effect_(EFFECT_NONE),
+      sequence_(0),
+      sequence_length_(0),
+      sequence_index_(0),
+      note_ticks_(0) {}
 
 void SoundEffect::initialize() {
   key_off();
@@ -41,7 +55,10 @@ void SoundEffect::initialize() {
   write_operator(3, 1, 0x28, 0x1f);
   initialized_ = 1;
   effect_ = EFFECT_NONE;
-  ticks_ = 0;
+  sequence_ = 0;
+  sequence_length_ = 0;
+  sequence_index_ = 0;
+  note_ticks_ = 0;
 }
 
 void SoundEffect::key_off() {
@@ -55,52 +72,94 @@ void SoundEffect::play_note(int key_code) {
   _iocs_opmset(0x08, 0x48 | OPM_CHANNEL);
 }
 
-void SoundEffect::start(Effect effect, int key_code) {
-  if (!initialized_) return;
+void SoundEffect::start(Effect effect, const int *sequence, int length) {
+  if (!initialized_ || !sequence || length <= 0) return;
   effect_ = effect;
   if (effect == EFFECT_CONFIRM) {
     write_operator(0, 1, 0x0c, 0x10);
     write_operator(3, 1, 0x24, 0x18);
-    ticks_ = CONFIRM_TICKS;
   } else if (effect == EFFECT_CANCEL) {
     write_operator(0, 1, 0x18, 0x18);
     write_operator(3, 1, 0x30, 0x1f);
-    ticks_ = CANCEL_TICKS;
-  } else {
+  } else if (effect == EFFECT_SELECT) {
     write_operator(0, 2, 0x12, 0x1a);
     write_operator(3, 1, 0x38, 0x1f);
-    ticks_ = SELECT_TICKS;
+  } else if (effect == EFFECT_COUNTDOWN) {
+    write_operator(0, 2, 0x14, 0x1a);
+    write_operator(3, 1, 0x3c, 0x1f);
+  } else if (effect == EFFECT_START) {
+    write_operator(0, 2, 0x08, 0x12);
+    write_operator(3, 1, 0x24, 0x1a);
+  } else if (effect == EFFECT_FINAL_LAP) {
+    write_operator(0, 1, 0x10, 0x14);
+    write_operator(3, 1, 0x28, 0x1c);
+  } else {
+    write_operator(0, 1, 0x08, 0x0c);
+    write_operator(3, 1, 0x7f, 0x1f);
   }
-  play_note(key_code);
+  sequence_ = sequence;
+  sequence_length_ = length;
+  sequence_index_ = 0;
+  note_ticks_ = sequence_[1];
+  play_note(sequence_[0]);
 }
 
 void SoundEffect::play_confirm() {
-  start(EFFECT_CONFIRM, CONFIRM_FIRST);
+  start(EFFECT_CONFIRM, kConfirmSequence,
+        SEQUENCE_LENGTH(kConfirmSequence));
 }
 
 void SoundEffect::play_cancel() {
-  start(EFFECT_CANCEL, CANCEL_FIRST);
+  start(EFFECT_CANCEL, kCancelSequence,
+        SEQUENCE_LENGTH(kCancelSequence));
 }
 
 void SoundEffect::play_select() {
-  start(EFFECT_SELECT, SELECT_FIRST);
+  start(EFFECT_SELECT, kSelectSequence,
+        SEQUENCE_LENGTH(kSelectSequence));
+}
+
+void SoundEffect::play_countdown() {
+  start(EFFECT_COUNTDOWN, kCountdownSequence,
+        SEQUENCE_LENGTH(kCountdownSequence));
+}
+
+void SoundEffect::play_start() {
+  start(EFFECT_START, kStartSequence,
+        SEQUENCE_LENGTH(kStartSequence));
+}
+
+void SoundEffect::play_final_lap() {
+  start(EFFECT_FINAL_LAP, kFinalLapSequence,
+        SEQUENCE_LENGTH(kFinalLapSequence));
+}
+
+void SoundEffect::play_goal(int result) {
+  if (result == 1) {
+    start(EFFECT_GOAL_P1, kGoalP1Sequence,
+          SEQUENCE_LENGTH(kGoalP1Sequence));
+  } else if (result == 2) {
+    start(EFFECT_GOAL_P2, kGoalP2Sequence,
+          SEQUENCE_LENGTH(kGoalP2Sequence));
+  } else {
+    start(EFFECT_GOAL_DRAW, kGoalDrawSequence,
+          SEQUENCE_LENGTH(kGoalDrawSequence));
+  }
 }
 
 void SoundEffect::update() {
-  if (effect_ == EFFECT_NONE || ticks_ <= 0) return;
-  --ticks_;
-  const int effect_ticks = effect_ == EFFECT_CONFIRM ? CONFIRM_TICKS :
-      (effect_ == EFFECT_CANCEL ? CANCEL_TICKS : SELECT_TICKS);
-  const int second_note_tick = effect_ticks - 1;
-  if (ticks_ == second_note_tick) {
-    const int second_note = effect_ == EFFECT_CONFIRM ? CONFIRM_SECOND :
-        (effect_ == EFFECT_CANCEL ? CANCEL_SECOND : SELECT_SECOND);
-    play_note(second_note);
-  }
-  if (ticks_ == 0) {
+  if (effect_ == EFFECT_NONE || note_ticks_ <= 0) return;
+  if (--note_ticks_ > 0) return;
+  ++sequence_index_;
+  if (sequence_index_ >= sequence_length_) {
     key_off();
     effect_ = EFFECT_NONE;
+    sequence_ = 0;
+    return;
   }
+  const int offset = sequence_index_ * 2;
+  note_ticks_ = sequence_[offset + 1];
+  play_note(sequence_[offset]);
 }
 
 void SoundEffect::finalize() {
@@ -110,5 +169,8 @@ void SoundEffect::finalize() {
   }
   initialized_ = 0;
   effect_ = EFFECT_NONE;
-  ticks_ = 0;
+  sequence_ = 0;
+  sequence_length_ = 0;
+  sequence_index_ = 0;
+  note_ticks_ = 0;
 }
