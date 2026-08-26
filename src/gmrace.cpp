@@ -87,7 +87,9 @@ GameModeRace::GameModeRace()
       tackle_cooldown_(0),
       countdown_cs_(0),
       effect_frame_(0),
-      pending_sound_(GAME_SOUND_NONE) {
+      pending_sound_(GAME_SOUND_NONE),
+      pending_sound_label_(0),
+      pending_sound_priority_(0) {
   for (int page = 0; page < 2; ++page) {
     for (int player = 0; player < PLAYER_COUNT; ++player) {
       lap_drawn_[page][player] = -1;
@@ -103,6 +105,14 @@ GameModeRace::GameModeRace()
   }
   boost_ready_[0] = 0;
   boost_ready_[1] = 0;
+  wall_sound_cooldown_[0] = 0;
+  wall_sound_cooldown_[1] = 0;
+}
+
+void GameModeRace::queue_sound(const char *label, int priority) {
+  if (!label || priority <= pending_sound_priority_) return;
+  pending_sound_label_ = label;
+  pending_sound_priority_ = priority;
 }
 
 void GameModeRace::set_player_count(int players) {
@@ -305,6 +315,7 @@ void GameModeRace::update_gates(const int *previous_angles) {
     } else {
       cars_[claim[0] ? 0 : 1].add_boost(GATE_BOOST_REWARD);
     }
+    queue_sound("GATE", 4);
     state.active = 0;
     state.cooldown = GATE_COOLDOWN_FRAMES;
   }
@@ -329,6 +340,9 @@ void GameModeRace::update_catchup_boost() {
 }
 
 void GameModeRace::update_slipstream() {
+  const int was_active[PLAYER_COUNT] = {
+    slipstream_active_[0], slipstream_active_[1]
+  };
   const int progress[PLAYER_COUNT] = {
     cars_[0].lap() * ANGLE_LIMIT + cars_[0].angle(),
     cars_[1].lap() * ANGLE_LIMIT + cars_[1].angle()
@@ -361,6 +375,7 @@ void GameModeRace::update_slipstream() {
   if (slipstream_frames_[trailing] >= SLIPSTREAM_CHARGE_FRAMES) {
     slipstream_active_[trailing] = 1;
     cars_[trailing].add_boost(SLIPSTREAM_BOOST_RECOVERY);
+    if (!was_active[trailing]) queue_sound("SLIPSTREAM", 3);
   }
 }
 
@@ -395,6 +410,7 @@ void GameModeRace::resolve_tackle() {
     cars_[0].apply_impact(-direction_0_to_1 * TACKLE_RECOIL, 92);
     cars_[1].apply_impact(direction_0_to_1 * TACKLE_RECOIL, 92);
   }
+  if (p1_attacks || p2_attacks) queue_sound("TACKLE", 5);
   tackle_cooldown_ = TACKLE_COOLDOWN_FRAMES;
 }
 
@@ -555,11 +571,14 @@ int GameModeRace::initialize() {
   countdown_cs_ = 0;
   effect_frame_ = 0;
   pending_sound_ = GAME_SOUND_NONE;
+  pending_sound_label_ = 0;
+  pending_sound_priority_ = 0;
   boost_ready_[0] = 0;
   boost_ready_[1] = player_count_ == 1;
   for (int player = 0; player < PLAYER_COUNT; ++player) {
     slipstream_frames_[player] = 0;
     slipstream_active_[player] = 0;
+    wall_sound_cooldown_[player] = 0;
   }
   for (int gate = 0; gate < GATE_COUNT; ++gate) {
     gates_[gate].angle = (gate + 1) * ANGLE_LIMIT / 4;
@@ -653,8 +672,42 @@ GameModeId GameModeRace::update() {
   const int previous_laps[PLAYER_COUNT] = {
     cars_[0].lap(), cars_[1].lap()
   };
-  cars_[0].update(player_input[0]);
-  cars_[1].update(player_count_ == 1 ? cpu_input() : player_input[1]);
+  const int previous_boosting[PLAYER_COUNT] = {
+    cars_[0].boosting(), cars_[1].boosting()
+  };
+  const int previous_drift[PLAYER_COUNT] = {
+    cars_[0].drift(), cars_[1].drift()
+  };
+  const int previous_offsets[PLAYER_COUNT] = {
+    cars_[0].offset(), cars_[1].offset()
+  };
+  CarInput race_input[PLAYER_COUNT] = {
+    player_input[0],
+    player_count_ == 1 ? cpu_input() : player_input[1]
+  };
+  cars_[0].update(race_input[0]);
+  cars_[1].update(race_input[1]);
+  for (int player = 0; player < PLAYER_COUNT; ++player) {
+    if (wall_sound_cooldown_[player] > 0) {
+      --wall_sound_cooldown_[player];
+    }
+    if (!previous_boosting[player] && cars_[player].boosting()) {
+      queue_sound("BOOST", 2);
+    }
+    if (previous_drift[player] == 0 && cars_[player].drift() != 0) {
+      queue_sound("DRIFT", 1);
+    }
+    const int hits_left = race_input[player].left &&
+                          cars_[player].offset() == -64 &&
+                          previous_offsets[player] > -64;
+    const int hits_right = race_input[player].right &&
+                           cars_[player].offset() == 64 &&
+                           previous_offsets[player] < 64;
+    if ((hits_left || hits_right) && wall_sound_cooldown_[player] == 0) {
+      queue_sound("WALL", 3);
+      wall_sound_cooldown_[player] = 8;
+    }
+  }
   if ((previous_laps[0] < 2 && cars_[0].lap() >= 2) ||
       (previous_laps[1] < 2 && cars_[1].lap() >= 2)) {
     pending_sound_ = GAME_SOUND_FINAL_LAP;
@@ -685,6 +738,13 @@ GameSoundId GameModeRace::consume_game_sound() {
   const GameSoundId sound = pending_sound_;
   pending_sound_ = GAME_SOUND_NONE;
   return sound;
+}
+
+const char *GameModeRace::consume_sound_label() {
+  const char *label = pending_sound_label_;
+  pending_sound_label_ = 0;
+  pending_sound_priority_ = 0;
+  return label;
 }
 
 void GameModeRace::render(int page) {

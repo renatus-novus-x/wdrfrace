@@ -455,3 +455,16 @@
 - Reduced the title garage clearing area so camera-cut cleanup no longer erases the `UP DOWN MODE  LEFT RIGHT LEVEL` instruction line.
 - Preserved the existing fixed 20 Hz simulation, two-page graphics buffering, and precomputed race-introduction geometry.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-26: In-race sound effects and controller usability
+
+- Added six high-priority in-race FM sound effects: BOOST, DRIFT, TACKLE, WALL, GATE, and SLIPSTREAM.
+- Added event-priority handling so important collision sounds are not immediately masked by lower-priority events occurring in the same update.
+- Added all new effects to the SOUND TEST label list.
+- Disabled the SELECT sound while moving left or right inside SOUND TEST so auditioned effects remain easy to distinguish.
+- Retuned SELECT as a short metallic cue and strengthened COUNTDOWN clarity.
+- Retuned START toward a cleaner BOOST-like rising tone.
+- Retuned DRIFT, TACKLE, WALL, and FINAL LAP to better match the futuristic racing presentation.
+- Added controller cancellation: button 2 cancels menu screens, while buttons 1 and 2 together return from a race without conflicting with the brake control.
+- Expanded HOW TO PLAY to explicitly show Q/N as BOOST, E/M as BRAKE, and the equivalent pad-button assignments.
+- Successfully rebuilt with the Ubuntu 24.04 elf2x68k environment and regenerated `dist/wdrfrace.xdf`.

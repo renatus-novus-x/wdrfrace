@@ -17,7 +17,6 @@ GameModeSoundTest::GameModeSoundTest()
     : selected_(0),
       direction_down_(0),
       confirm_down_(0),
-      select_sound_pending_(0),
       pending_label_(0) {
   drawn_selected_[0] = -1;
   drawn_selected_[1] = -1;
@@ -27,7 +26,6 @@ int GameModeSoundTest::initialize() {
   input_.update();
   direction_down_ = input_.menu_left() || input_.menu_right();
   confirm_down_ = input_.confirm();
-  select_sound_pending_ = 0;
   pending_label_ = 0;
   drawn_selected_[0] = -1;
   drawn_selected_[1] = -1;
@@ -36,14 +34,13 @@ int GameModeSoundTest::initialize() {
 
 GameModeId GameModeSoundTest::update() {
   input_.update();
-  if (input_.quit()) return GAME_MODE_TITLE;
+  if (input_.cancel()) return GAME_MODE_TITLE;
 
   const int direction = input_.menu_left() || input_.menu_right();
   if (direction && !direction_down_) {
     const int count = SoundEffect::label_count();
     if (input_.menu_left()) selected_ = (selected_ + count - 1) % count;
     else selected_ = (selected_ + 1) % count;
-    select_sound_pending_ = 1;
   }
   direction_down_ = direction;
 
@@ -53,12 +50,6 @@ GameModeId GameModeSoundTest::update() {
   }
   confirm_down_ = confirm;
   return GAME_MODE_SE_TEST;
-}
-
-int GameModeSoundTest::consume_select_sound() {
-  const int pending = select_sound_pending_;
-  select_sound_pending_ = 0;
-  return pending;
 }
 
 const char *GameModeSoundTest::consume_sound_label() {

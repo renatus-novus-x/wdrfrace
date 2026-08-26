@@ -8,10 +8,25 @@ namespace {
 const int OPM_CHANNEL = 7;
 const int kConfirmSequence[] = {0x5a, 1, 0x6e, 4};
 const int kCancelSequence[] = {0x38, 1, 0x2a, 2};
-const int kSelectSequence[] = {0x4e, 1, 0x58, 1};
-const int kCountdownSequence[] = {0x4a, 2};
-const int kStartSequence[] = {0x4a, 1, 0x6e, 3};
-const int kFinalLapSequence[] = {0x5e, 1, 0x4a, 3};
+const int kSelectSequence[] = {0x6e, 2};
+const int kCountdownSequence[] = {0x6a, 2};
+const int kStartSequence[] = {
+  0x4e, 1, 0x5a, 1, 0x66, 2, 0x72, 4
+};
+const int kFinalLapSequence[] = {
+  0x4a, 1, 0x52, 1, 0x5a, 2,
+  0x4a, 1, 0x52, 1, 0x5a, 1, 0x6e, 3
+};
+const int kBoostSequence[] = {0x46, 1, 0x52, 1, 0x5e, 1, 0x6a, 1};
+const int kDriftSequence[] = {
+  0x42, 1, 0x4e, 1, 0x5a, 1, 0x66, 1, 0x72, 2
+};
+const int kTackleSequence[] = {0x36, 1, 0x2a, 3};
+const int kWallSequence[] = {
+  0x42, 1, 0x32, 1, 0x4a, 1, 0x36, 1, 0x52, 1
+};
+const int kGateSequence[] = {0x4a, 1, 0x5a, 1, 0x6e, 2};
+const int kSlipstreamSequence[] = {0x3e, 1, 0x46, 1, 0x52, 2};
 const int kGoalP1Sequence[] = {
   0x4a, 2, 0x4e, 2, 0x5a, 2, 0x6e, 4
 };
@@ -27,7 +42,8 @@ const int kGoalDrawSequence[] = {
 
 const char *kSoundLabels[] = {
   "CONFIRM", "CANCEL", "SELECT", "COUNTDOWN", "START",
-  "FINAL LAP", "GOAL P1", "GOAL P2", "GOAL DRAW"
+  "FINAL LAP", "BOOST", "DRIFT", "TACKLE", "WALL", "GATE",
+  "SLIPSTREAM", "GOAL P1", "GOAL P2", "GOAL DRAW"
 };
 
 void write_operator(int slot, int multiple, int total_level, int decay) {
@@ -88,17 +104,35 @@ void SoundEffect::start(Effect effect, const int *sequence, int length) {
     write_operator(0, 1, 0x18, 0x18);
     write_operator(3, 1, 0x30, 0x1f);
   } else if (effect == EFFECT_SELECT) {
-    write_operator(0, 2, 0x12, 0x1a);
-    write_operator(3, 1, 0x38, 0x1f);
+    write_operator(0, 6, 0x18, 0x1f);
+    write_operator(3, 1, 0x08, 0x1f);
   } else if (effect == EFFECT_COUNTDOWN) {
-    write_operator(0, 2, 0x14, 0x1a);
-    write_operator(3, 1, 0x3c, 0x1f);
+    write_operator(0, 1, 0x18, 0x1f);
+    write_operator(3, 1, 0x02, 0x1f);
   } else if (effect == EFFECT_START) {
-    write_operator(0, 2, 0x08, 0x12);
-    write_operator(3, 1, 0x24, 0x1a);
+    write_operator(0, 3, 0x18, 0x10);
+    write_operator(3, 1, 0x10, 0x10);
   } else if (effect == EFFECT_FINAL_LAP) {
-    write_operator(0, 1, 0x10, 0x14);
-    write_operator(3, 1, 0x28, 0x1c);
+    write_operator(0, 2, 0x18, 0x18);
+    write_operator(3, 1, 0x14, 0x14);
+  } else if (effect == EFFECT_BOOST) {
+    write_operator(0, 3, 0x08, 0x10);
+    write_operator(3, 1, 0x20, 0x18);
+  } else if (effect == EFFECT_DRIFT) {
+    write_operator(0, 5, 0x10, 0x1c);
+    write_operator(3, 2, 0x18, 0x16);
+  } else if (effect == EFFECT_TACKLE) {
+    write_operator(0, 1, 0x04, 0x1f);
+    write_operator(3, 1, 0x10, 0x1f);
+  } else if (effect == EFFECT_WALL) {
+    write_operator(0, 7, 0x04, 0x1f);
+    write_operator(3, 6, 0x0c, 0x1f);
+  } else if (effect == EFFECT_GATE) {
+    write_operator(0, 2, 0x0c, 0x14);
+    write_operator(3, 1, 0x26, 0x18);
+  } else if (effect == EFFECT_SLIPSTREAM) {
+    write_operator(0, 4, 0x18, 0x0c);
+    write_operator(3, 1, 0x30, 0x14);
   } else {
     write_operator(0, 1, 0x08, 0x0c);
     write_operator(3, 1, 0x7f, 0x1f);
@@ -140,6 +174,31 @@ void SoundEffect::play_final_lap() {
         SEQUENCE_LENGTH(kFinalLapSequence));
 }
 
+void SoundEffect::play_boost() {
+  start(EFFECT_BOOST, kBoostSequence, SEQUENCE_LENGTH(kBoostSequence));
+}
+
+void SoundEffect::play_drift() {
+  start(EFFECT_DRIFT, kDriftSequence, SEQUENCE_LENGTH(kDriftSequence));
+}
+
+void SoundEffect::play_tackle() {
+  start(EFFECT_TACKLE, kTackleSequence, SEQUENCE_LENGTH(kTackleSequence));
+}
+
+void SoundEffect::play_wall() {
+  start(EFFECT_WALL, kWallSequence, SEQUENCE_LENGTH(kWallSequence));
+}
+
+void SoundEffect::play_gate() {
+  start(EFFECT_GATE, kGateSequence, SEQUENCE_LENGTH(kGateSequence));
+}
+
+void SoundEffect::play_slipstream() {
+  start(EFFECT_SLIPSTREAM, kSlipstreamSequence,
+        SEQUENCE_LENGTH(kSlipstreamSequence));
+}
+
 void SoundEffect::play_goal(int result) {
   if (result == 1) {
     start(EFFECT_GOAL_P1, kGoalP1Sequence,
@@ -161,6 +220,12 @@ int SoundEffect::play(const char *label) {
   else if (strcmp(label, "COUNTDOWN") == 0) play_countdown();
   else if (strcmp(label, "START") == 0) play_start();
   else if (strcmp(label, "FINAL LAP") == 0) play_final_lap();
+  else if (strcmp(label, "BOOST") == 0) play_boost();
+  else if (strcmp(label, "DRIFT") == 0) play_drift();
+  else if (strcmp(label, "TACKLE") == 0) play_tackle();
+  else if (strcmp(label, "WALL") == 0) play_wall();
+  else if (strcmp(label, "GATE") == 0) play_gate();
+  else if (strcmp(label, "SLIPSTREAM") == 0) play_slipstream();
   else if (strcmp(label, "GOAL P1") == 0) play_goal(1);
   else if (strcmp(label, "GOAL P2") == 0) play_goal(2);
   else if (strcmp(label, "GOAL DRAW") == 0) play_goal(0);

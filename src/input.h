@@ -25,6 +25,7 @@ class Input {
  public:
   void update();
   int quit() const;
+  int cancel() const;
   int confirm() const;
   int any_key() const;
   int menu_up() const;

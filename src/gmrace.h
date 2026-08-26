@@ -58,8 +58,12 @@ class GameModeRace : public GameMode {
   int course_drawn_[2];
   int slipstream_frames_[PLAYER_COUNT];
   int slipstream_active_[PLAYER_COUNT];
+  int wall_sound_cooldown_[PLAYER_COUNT];
   GameSoundId pending_sound_;
+  const char *pending_sound_label_;
+  int pending_sound_priority_;
 
+  void queue_sound(const char *label, int priority);
   int initialize_trig_table_step();
   void prepare_intro_frame(int frame);
   void draw_ring(const Vec2s *ring, iocs_color_t color) const;
@@ -100,6 +104,7 @@ class GameModeRace : public GameMode {
   virtual void advance_time(int elapsed_cs);
   virtual GameModeId update();
   virtual GameSoundId consume_game_sound();
+  virtual const char *consume_sound_label();
   virtual void render(int page);
   virtual void finalize();
 };

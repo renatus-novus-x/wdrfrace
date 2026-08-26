@@ -54,7 +54,7 @@ int GameModeCourse::initialize() {
 
 GameModeId GameModeCourse::update() {
   input_.update();
-  if (input_.quit()) return GAME_MODE_TITLE;
+  if (input_.cancel()) return GAME_MODE_TITLE;
 
   const int direction = input_.menu_left() || input_.menu_right();
   if (direction && !direction_down_) {

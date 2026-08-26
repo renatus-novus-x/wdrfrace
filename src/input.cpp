@@ -49,7 +49,15 @@ int Input::either_pad_down(int mask) const {
   return pad_down(0, mask) || pad_down(1, mask);
 }
 
-int Input::quit() const { return key_down(KEY_ESC); }
+int Input::quit() const {
+  return key_down(KEY_ESC) ||
+         (pad_down(0, JOY_BUTTON_1) && pad_down(0, JOY_BUTTON_2)) ||
+         (pad_down(1, JOY_BUTTON_1) && pad_down(1, JOY_BUTTON_2));
+}
+
+int Input::cancel() const {
+  return key_down(KEY_ESC) || either_pad_down(JOY_BUTTON_2);
+}
 
 int Input::confirm() const {
   return key_down(KEY_SPACE) || either_pad_down(JOY_BUTTON_1);

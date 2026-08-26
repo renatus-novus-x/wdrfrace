@@ -10,7 +10,6 @@ class GameModeSoundTest : public GameMode {
   int selected_;
   int direction_down_;
   int confirm_down_;
-  int select_sound_pending_;
   const char *pending_label_;
   int drawn_selected_[2];
 
@@ -21,7 +20,6 @@ class GameModeSoundTest : public GameMode {
   GameModeSoundTest();
   virtual int initialize();
   virtual GameModeId update();
-  virtual int consume_select_sound();
   virtual const char *consume_sound_label();
   virtual void render(int page);
   virtual void finalize();

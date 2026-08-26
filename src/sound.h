@@ -11,6 +11,12 @@ class SoundEffect {
     EFFECT_COUNTDOWN,
     EFFECT_START,
     EFFECT_FINAL_LAP,
+    EFFECT_BOOST,
+    EFFECT_DRIFT,
+    EFFECT_TACKLE,
+    EFFECT_WALL,
+    EFFECT_GATE,
+    EFFECT_SLIPSTREAM,
     EFFECT_GOAL_P1,
     EFFECT_GOAL_P2,
     EFFECT_GOAL_DRAW,
@@ -37,6 +43,12 @@ class SoundEffect {
   void play_countdown();
   void play_start();
   void play_final_lap();
+  void play_boost();
+  void play_drift();
+  void play_tackle();
+  void play_wall();
+  void play_gate();
+  void play_slipstream();
   void play_goal(int result);
   int play(const char *label);
   static int label_count();
