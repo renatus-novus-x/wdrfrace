@@ -206,9 +206,9 @@ When the gap becomes large enough, the trailing car slowly recovers boost energy
 
 ### SLIPSTREAM
 
-Stay close behind the leading car and near the same lane for about half a second to begin recovering BOOST. The trailing car brightens while the slipstream is active.
+Enter the leader's lane and remain between contact range and roughly one eighth of a lap behind for about 0.3 seconds. The HUD shows `DRAFT` while locking on and a blinking `SLIP` when recovery is active. The trailing car brightens, and its rear body and roof lines blink white at 5 Hz.
 
-Speed never increases automatically. Choose whether to spend the recovered BOOST on a pass or remain behind to recover more. Moving away, leaving the lane, or entering contact range ends the effect.
+The gauge recovers 12 points per fixed update, exceeding BOOST consumption even while the button is held. Speed never increases automatically. Moving more than one eighth of a lap away, changing lanes, or entering contact range ends the effect.
 
 ## 9. CPU LEVEL
 
@@ -300,11 +300,11 @@ If both cars drift into each other, both are knocked away and lose substantial s
 
 ### Enter the Same Lane First
 
-The system checks lateral position as well as distance. Match the leading car smoothly instead of making a large last-second drift.
+The system checks both lane and lateral position. Enter the leader's lane, confirm `DRAFT` on the HUD, and hold that position for about 0.3 seconds.
 
-### Wait for the Bright Car
+### Convert DRAFT into SLIP
 
-After roughly half a second of stable pursuit, the trailing car brightens and BOOST recovery begins. Boosting out too early gives up the recovery.
+`DRAFT` means the system is locking on; blinking `SLIP` means BOOST recovery is active. Moving alongside before `SLIP` appears cancels the attempt. The bright car and blinking white rear lines provide an additional visual cue.
 
 ### Choose the Pass or Tackle
 

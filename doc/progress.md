@@ -374,6 +374,21 @@
 - Applies the same rule to human and CPU cars in one-player and two-player races.
 - Updated the Japanese and English manuals with slipstream rules and strategy guidance.
 
+## 2026-08-26: Accessible slipstream activation and feedback
+
+- Investigated reports that slipstream recovery could not be activated reliably during normal play.
+- Identified an overly narrow combination of distance, lateral-offset, and duration requirements rather than an unreachable arithmetic branch.
+- Expanded the valid trailing distance from one sixteenth to one eighth of a lap while retaining the minimum separation outside tackle-contact range.
+- Requires both cars to occupy the same logical lane and permits up to 48 offset units within that lane.
+- Reduced lock-on time from 10 to 6 fixed updates, approximately 0.3 seconds at 20 Hz.
+- Increased recovery from 8 to 12 boost points per update so the gauge rises even while boost consumes 8 points.
+- Prevents distance-linked catch-up recovery from stacking with active slipstream recovery.
+- Added a steady `DRAFT` HUD state during lock-on, followed by the existing blinking `SLIP`, high-brightness car, and blinking rear-edge feedback.
+- Updated the Japanese and English manuals with the revised activation window, HUD states, recovery rate, and strategy.
+- Synchronized the revised instructions across the Markdown, PowerPoint, and PDF manual editions while preserving the existing slide design.
+- Verified all 17 slides in both PowerPoint editions have no content overflow and visually checked the affected PowerPoint and PDF pages.
+- Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
 ## 2026-08-26: Per-shot title wireframe framing
 
 - Added build-time two-dimensional BoundingBox fitting to all four title-screen camera shots.

@@ -33,18 +33,23 @@ class Car {
   uint8_t current_visible_[VERTEX_COUNT];
   int have_previous_[2];
 
-  int project(const Camera &camera, const Vec3f &point, Vec2s &screen) const;
+  int project(const Camera &camera, const Vec3f &point, Vec2s &screen,
+              float projection_scale, float projection_center_x,
+              float projection_center_y) const;
   void draw_wire(const Vec2s *points, const uint8_t *visible,
                  iocs_color_t color) const;
 
  public:
   void initialize(int angle, int offset, int course_id);
   void update(const CarInput &input);
-  void prepare_render(const Camera &camera, const float *sin_table);
+  void prepare_render(const Camera &camera, const float *sin_table,
+                      float projection_scale, float projection_center_x,
+                      float projection_center_y);
   void prepare_screen(const Vec2s *points);
   ScreenRect previous_bounds(int page) const;
   void clear_previous(int page);
   void render(int page, iocs_color_t color);
+  void render_rear_highlight(iocs_color_t color) const;
   int speed() const;
   int angle() const;
   int offset() const;

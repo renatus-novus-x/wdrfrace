@@ -29,7 +29,6 @@ const float CAR_ROOF_REAR_SCALE = 0.60f;
 const float CAR_ROOF_WIDTH_SCALE = 0.68f;
 const float CAR_ROOF_FRONT_HEIGHT = 0.62f;
 const float CAR_ROOF_REAR_HEIGHT = 0.54f;
-const float PROJECTION_SCALE = 300.0f;
 const iocs_color_t COLOR_BLACK = 0x0000;
 
 void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
@@ -99,19 +98,24 @@ void Car::update(const CarInput &input) {
 }
 
 int Car::project(const Camera &camera, const Vec3f &point,
-                 Vec2s &screen) const {
+                 Vec2s &screen, float projection_scale,
+                 float projection_center_x,
+                 float projection_center_y) const {
   const Vec3f view = camera.world_to_view(point);
   if (view.z > -1.0f) return 0;
-  const float scale = PROJECTION_SCALE / -view.z;
-  const int x = (int)(FIELD_W * 0.5f + view.x * scale);
-  const int y = (int)(FIELD_H * 0.5f - view.y * scale);
+  const float scale = projection_scale / -view.z;
+  const int x = (int)(projection_center_x + view.x * scale);
+  const int y = (int)(projection_center_y - view.y * scale);
   if (x < 0 || x >= FIELD_W || y < 40 || y >= FIELD_H - 24) return 0;
   screen.x = (int16_t)x;
   screen.y = (int16_t)y;
   return 1;
 }
 
-void Car::prepare_render(const Camera &camera, const float *sin_table) {
+void Car::prepare_render(const Camera &camera, const float *sin_table,
+                         float projection_scale,
+                         float projection_center_x,
+                         float projection_center_y) {
   const int index = (angle_ >> 8) & (TRIG_TABLE_SIZE - 1);
   const float s = sin_table[index];
   const float c = sin_table[(index + TRIG_TABLE_SIZE / 4)
@@ -157,7 +161,9 @@ void Car::prepare_render(const Camera &camera, const float *sin_table) {
      center_z - roof_rear_z - roof_side_z}
   };
   for (int i = 0; i < VERTEX_COUNT; ++i) {
-    current_visible_[i] = (uint8_t)project(camera, points[i], current_[i]);
+    current_visible_[i] = (uint8_t)project(
+        camera, points[i], current_[i], projection_scale,
+        projection_center_x, projection_center_y);
   }
 }
 
@@ -226,6 +232,18 @@ void Car::render(int page, iocs_color_t color) {
     previous_visible_[page][i] = current_visible_[i];
   }
   have_previous_[page] = 1;
+}
+
+void Car::render_rear_highlight(iocs_color_t color) const {
+  static const uint8_t rear_edges[2][2] = {{2, 3}, {6, 7}};
+  for (int i = 0; i < 2; ++i) {
+    const int a = rear_edges[i][0];
+    const int b = rear_edges[i][1];
+    if (current_visible_[a] && current_visible_[b]) {
+      draw_line(current_[a].x, current_[a].y,
+                current_[b].x, current_[b].y, color);
+    }
+  }
 }
 
 int Car::speed() const { return speed_; }

@@ -42,11 +42,13 @@ class GameModeRace : public GameMode {
   RaceWinner winner_;
   int lap_drawn_[2][PLAYER_COUNT];
   int boost_drawn_[2][PLAYER_COUNT];
+  int slip_drawn_visible_[2][PLAYER_COUNT];
   ActiveGate gates_[GATE_COUNT];
   int gate_drawn_active_[2][GATE_COUNT];
   int gate_drawn_lane_[2][GATE_COUNT];
   int tackle_cooldown_;
   int countdown_frame_;
+  int effect_frame_;
   int countdown_drawn_stage_[2];
   int boost_ready_[PLAYER_COUNT];
   int course_drawn_[2];
@@ -68,6 +70,8 @@ class GameModeRace : public GameMode {
   CarInput cpu_input();
   void draw_hud(int page);
   void draw_boost_gauge(int page, int player);
+  void draw_slip_indicator(int page, int player);
+  int slipstream_blink_on(int player) const;
   void update_gates(const int *previous_angles);
   void update_slipstream();
   void update_catchup_boost();

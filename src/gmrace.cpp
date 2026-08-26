@@ -14,6 +14,7 @@ const iocs_color_t COLOR_P1 = 0x67d9;
 const iocs_color_t COLOR_P2 = 0x62bf;
 const iocs_color_t COLOR_P1_BOOST = 0xdff7;
 const iocs_color_t COLOR_P2_BOOST = 0xde7f;
+const iocs_color_t COLOR_SLIP = 0xffff;
 const iocs_color_t COLOR_GATE = 0xf83f;
 const iocs_color_t COLOR_HUD_DIM = 0x2109;
 const int ANGLE_LIMIT = 65536;
@@ -33,10 +34,10 @@ const int CATCHUP_GAP_SMALL = ANGLE_LIMIT / 16;
 const int CATCHUP_GAP_MEDIUM = ANGLE_LIMIT / 8;
 const int CATCHUP_GAP_LARGE = ANGLE_LIMIT / 4;
 const int SLIPSTREAM_GAP_MIN = TACKLE_CONTACT_ANGLE;
-const int SLIPSTREAM_GAP_MAX = CATCHUP_GAP_SMALL - 1;
-const int SLIPSTREAM_OFFSET_LIMIT = 24;
-const int SLIPSTREAM_CHARGE_FRAMES = 10;
-const int SLIPSTREAM_BOOST_RECOVERY = 8;
+const int SLIPSTREAM_GAP_MAX = CATCHUP_GAP_MEDIUM - 1;
+const int SLIPSTREAM_OFFSET_LIMIT = 48;
+const int SLIPSTREAM_CHARGE_FRAMES = 6;
+const int SLIPSTREAM_BOOST_RECOVERY = 12;
 
 const char *countdown_label(int stage) {
   static const char *labels[] = {"READY", "3", "2", "1", "START"};
@@ -80,11 +81,13 @@ GameModeRace::GameModeRace()
       course_id_(0),
       winner_(RACE_WINNER_NONE),
       tackle_cooldown_(0),
-      countdown_frame_(0) {
+      countdown_frame_(0),
+      effect_frame_(0) {
   for (int page = 0; page < 2; ++page) {
     for (int player = 0; player < PLAYER_COUNT; ++player) {
       lap_drawn_[page][player] = -1;
       boost_drawn_[page][player] = -1;
+      slip_drawn_visible_[page][player] = -1;
     }
     for (int gate = 0; gate < GATE_COUNT; ++gate) {
       gate_drawn_active_[page][gate] = 0;
@@ -309,6 +312,7 @@ void GameModeRace::update_catchup_boost() {
   if (progress[0] == progress[1]) return;
 
   const int trailing = progress[0] < progress[1] ? 0 : 1;
+  if (slipstream_active_[trailing]) return;
   int gap = progress[0] - progress[1];
   if (gap < 0) gap = -gap;
   int recovery = 0;
@@ -338,6 +342,8 @@ void GameModeRace::update_slipstream() {
   if (offset_gap < 0) offset_gap = -offset_gap;
   slipstream_frames_[leading] = 0;
   if (gap < SLIPSTREAM_GAP_MIN || gap > SLIPSTREAM_GAP_MAX ||
+      lane_for_offset(cars_[leading].offset()) !=
+          lane_for_offset(cars_[trailing].offset()) ||
       offset_gap > SLIPSTREAM_OFFSET_LIMIT) {
     slipstream_frames_[trailing] = 0;
     return;
@@ -472,6 +478,7 @@ void GameModeRace::draw_hud(int page) {
       lap_drawn_[page][player] = current_lap;
     }
     draw_boost_gauge(page, player);
+    draw_slip_indicator(page, player);
   }
 }
 
@@ -501,6 +508,30 @@ void GameModeRace::draw_boost_gauge(int page, int player) {
   boost_drawn_[page][player] = level;
 }
 
+int GameModeRace::slipstream_blink_on(int player) const {
+  return slipstream_active_[player] && (effect_frame_ & 3) < 2;
+}
+
+void GameModeRace::draw_slip_indicator(int page, int player) {
+  const int state = slipstream_active_[player] ?
+      (slipstream_blink_on(player) ? 2 : 0) :
+      (slipstream_frames_[player] > 0 ? 1 : 0);
+  const int previous = slip_drawn_visible_[page][player];
+  if (previous == state) return;
+  const int x = player == 0 ? 20 : 320;
+  if (previous == 1) {
+    screen_text_tracking(x, 45, "DRAFT", 1, 1, COLOR_BLACK);
+  } else if (previous == 2) {
+    screen_text_tracking(x, 45, "SLIP", 1, 1, COLOR_BLACK);
+  }
+  if (state == 1) {
+    screen_text_tracking(x, 45, "DRAFT", 1, 1, COLOR_HUD_DIM);
+  } else if (state == 2) {
+    screen_text_tracking(x, 45, "SLIP", 1, 1, COLOR_SLIP);
+  }
+  slip_drawn_visible_[page][player] = state;
+}
+
 int GameModeRace::initialize() {
   initialize_trig_table();
   intro_frame_ = 0;
@@ -513,6 +544,7 @@ int GameModeRace::initialize() {
   cpu_boost_frames_ = 0;
   cpu_boost_cooldown_ = 0;
   countdown_frame_ = 0;
+  effect_frame_ = 0;
   boost_ready_[0] = 0;
   boost_ready_[1] = player_count_ == 1;
   for (int player = 0; player < PLAYER_COUNT; ++player) {
@@ -529,6 +561,7 @@ int GameModeRace::initialize() {
     for (int player = 0; player < PLAYER_COUNT; ++player) {
       lap_drawn_[page][player] = -1;
       boost_drawn_[page][player] = -1;
+      slip_drawn_visible_[page][player] = -1;
     }
     for (int gate = 0; gate < GATE_COUNT; ++gate) {
       gate_drawn_active_[page][gate] = 0;
@@ -550,6 +583,7 @@ int GameModeRace::initialize() {
 
 GameModeId GameModeRace::update() {
   input_.update();
+  ++effect_frame_;
   if (input_.quit()) return GAME_MODE_TITLE;
   if (intro_frame_ + 1 < INTRO_FRAME_COUNT) {
     ++intro_frame_;
@@ -633,16 +667,22 @@ void GameModeRace::render(int page) {
   if (intro_frame_ + 1 < INTRO_FRAME_COUNT) return;
 
   ScreenRect damage[PLAYER_COUNT];
+  const RaceProjection &projection = kRaceProjections[course_id_];
   for (int i = 0; i < PLAYER_COUNT; ++i) {
     damage[i] = cars_[i].previous_bounds(page);
-    cars_[i].prepare_render(camera_, sin_table_);
+    cars_[i].prepare_render(camera_, sin_table_, projection.scale,
+                            projection.center_x, projection.center_y);
   }
   for (int i = 0; i < PLAYER_COUNT; ++i) cars_[i].clear_previous(page);
-  repair_track(kIntroFrames[course_id_][INTRO_FRAME_COUNT - 1].track,
-               damage, PLAYER_COUNT);
-  draw_gates(page, kIntroFrames[course_id_][INTRO_FRAME_COUNT - 1].track);
+  repair_track(kRaceTracks[course_id_], damage, PLAYER_COUNT);
+  draw_gates(page, kRaceTracks[course_id_]);
   cars_[0].render(page, car_color[0]);
   cars_[1].render(page, car_color[1]);
+  for (int player = 0; player < PLAYER_COUNT; ++player) {
+    if (slipstream_blink_on(player)) {
+      cars_[player].render_rear_highlight(COLOR_SLIP);
+    }
+  }
   draw_hud(page);
   draw_countdown(page);
 }
