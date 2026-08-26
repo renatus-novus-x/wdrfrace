@@ -32,6 +32,11 @@ const int COUNTDOWN_END_FRAME = COUNTDOWN_GO_FRAME + 10;
 const int CATCHUP_GAP_SMALL = ANGLE_LIMIT / 16;
 const int CATCHUP_GAP_MEDIUM = ANGLE_LIMIT / 8;
 const int CATCHUP_GAP_LARGE = ANGLE_LIMIT / 4;
+const int SLIPSTREAM_GAP_MIN = TACKLE_CONTACT_ANGLE;
+const int SLIPSTREAM_GAP_MAX = CATCHUP_GAP_SMALL - 1;
+const int SLIPSTREAM_OFFSET_LIMIT = 24;
+const int SLIPSTREAM_CHARGE_FRAMES = 10;
+const int SLIPSTREAM_BOOST_RECOVERY = 8;
 
 const char *countdown_label(int stage) {
   static const char *labels[] = {"READY", "3", "2", "1", "START"};
@@ -313,6 +318,40 @@ void GameModeRace::update_catchup_boost() {
   if (recovery > 0) cars_[trailing].add_boost(recovery);
 }
 
+void GameModeRace::update_slipstream() {
+  const int progress[PLAYER_COUNT] = {
+    cars_[0].lap() * ANGLE_LIMIT + cars_[0].angle(),
+    cars_[1].lap() * ANGLE_LIMIT + cars_[1].angle()
+  };
+  slipstream_active_[0] = 0;
+  slipstream_active_[1] = 0;
+  if (progress[0] == progress[1]) {
+    slipstream_frames_[0] = 0;
+    slipstream_frames_[1] = 0;
+    return;
+  }
+
+  const int trailing = progress[0] < progress[1] ? 0 : 1;
+  const int leading = 1 - trailing;
+  int gap = progress[leading] - progress[trailing];
+  int offset_gap = cars_[leading].offset() - cars_[trailing].offset();
+  if (offset_gap < 0) offset_gap = -offset_gap;
+  slipstream_frames_[leading] = 0;
+  if (gap < SLIPSTREAM_GAP_MIN || gap > SLIPSTREAM_GAP_MAX ||
+      offset_gap > SLIPSTREAM_OFFSET_LIMIT) {
+    slipstream_frames_[trailing] = 0;
+    return;
+  }
+
+  if (slipstream_frames_[trailing] < SLIPSTREAM_CHARGE_FRAMES) {
+    ++slipstream_frames_[trailing];
+  }
+  if (slipstream_frames_[trailing] >= SLIPSTREAM_CHARGE_FRAMES) {
+    slipstream_active_[trailing] = 1;
+    cars_[trailing].add_boost(SLIPSTREAM_BOOST_RECOVERY);
+  }
+}
+
 void GameModeRace::resolve_tackle() {
   if (tackle_cooldown_ > 0) {
     --tackle_cooldown_;
@@ -476,6 +515,10 @@ int GameModeRace::initialize() {
   countdown_frame_ = 0;
   boost_ready_[0] = 0;
   boost_ready_[1] = player_count_ == 1;
+  for (int player = 0; player < PLAYER_COUNT; ++player) {
+    slipstream_frames_[player] = 0;
+    slipstream_active_[player] = 0;
+  }
   for (int gate = 0; gate < GATE_COUNT; ++gate) {
     gates_[gate].angle = (gate + 1) * ANGLE_LIMIT / 4;
     gates_[gate].lane = gate;
@@ -531,6 +574,7 @@ GameModeId GameModeRace::update() {
   cars_[1].update(player_count_ == 1 ? cpu_input() : player_input[1]);
   resolve_tackle();
   update_gates(previous_angles);
+  update_slipstream();
   update_catchup_boost();
   const int p1_finished = cars_[0].lap() >= 3;
   const int p2_finished = cars_[1].lap() >= 3;
@@ -544,12 +588,18 @@ GameModeId GameModeRace::update() {
 }
 
 void GameModeRace::render(int page) {
+  const iocs_color_t car_color[PLAYER_COUNT] = {
+    cars_[0].boosting() || slipstream_active_[0] ?
+        COLOR_P1_BOOST : COLOR_P1,
+    cars_[1].boosting() || slipstream_active_[1] ?
+        COLOR_P2_BOOST : COLOR_P2
+  };
   if (intro_drawn_frame_[page] < 0) {
     clear_screen();
     draw_track(kIntroFrames[course_id_][intro_frame_].track, COLOR_TRACK);
     prepare_intro_frame(intro_frame_);
-    cars_[0].render(page, cars_[0].boosting() ? COLOR_P1_BOOST : COLOR_P1);
-    cars_[1].render(page, cars_[1].boosting() ? COLOR_P2_BOOST : COLOR_P2);
+    cars_[0].render(page, car_color[0]);
+    cars_[1].render(page, car_color[1]);
     if (intro_frame_ + 1 >= INTRO_FRAME_COUNT) {
       draw_gates(page, kIntroFrames[course_id_][intro_frame_].track);
     }
@@ -569,8 +619,8 @@ void GameModeRace::render(int page) {
     cars_[1].clear_previous(page);
     draw_track(previous.track, COLOR_BLACK);
     draw_track(next.track, COLOR_TRACK);
-    cars_[0].render(page, cars_[0].boosting() ? COLOR_P1_BOOST : COLOR_P1);
-    cars_[1].render(page, cars_[1].boosting() ? COLOR_P2_BOOST : COLOR_P2);
+    cars_[0].render(page, car_color[0]);
+    cars_[1].render(page, car_color[1]);
     if (intro_frame_ + 1 >= INTRO_FRAME_COUNT) {
       draw_gates(page, next.track);
     }
@@ -591,8 +641,8 @@ void GameModeRace::render(int page) {
   repair_track(kIntroFrames[course_id_][INTRO_FRAME_COUNT - 1].track,
                damage, PLAYER_COUNT);
   draw_gates(page, kIntroFrames[course_id_][INTRO_FRAME_COUNT - 1].track);
-  cars_[0].render(page, cars_[0].boosting() ? COLOR_P1_BOOST : COLOR_P1);
-  cars_[1].render(page, cars_[1].boosting() ? COLOR_P2_BOOST : COLOR_P2);
+  cars_[0].render(page, car_color[0]);
+  cars_[1].render(page, car_color[1]);
   draw_hud(page);
   draw_countdown(page);
 }

@@ -29,9 +29,10 @@ This manual explains how to start the game, control your car, understand the rac
 12. Boost Strategy
 13. Active Gate Strategy
 14. Drift Tackle Strategy
-15. Catching the Leader
-16. Racing the CPU
-17. Two-Player Strategy
+15. Slipstream Strategy
+16. Catching the Leader
+17. Racing the CPU
+18. Two-Player Strategy
 
 ---
 
@@ -203,6 +204,12 @@ A car pushed against a lane limit suffers extra speed loss.
 
 When the gap becomes large enough, the trailing car slowly recovers boost energy. Speed is not increased automatically. The driver must decide when to use the recovered boost.
 
+### SLIPSTREAM
+
+Stay close behind the leading car and near the same lane for about half a second to begin recovering BOOST. The trailing car brightens while the slipstream is active.
+
+Speed never increases automatically. Choose whether to spend the recovered BOOST on a pass or remain behind to recover more. Moving away, leaving the lane, or entering contact range ends the effect.
+
 ## 9. CPU LEVEL
 
 | LEVEL | Behavior | Recommended For |
@@ -289,7 +296,21 @@ Pushing a rival into the inner or outer limit causes extra speed loss. This can 
 
 If both cars drift into each other, both are knocked away and lose substantial speed. A leading driver may be better off yielding the lane.
 
-## 15. Catching the Leader
+## 15. Slipstream Strategy
+
+### Enter the Same Lane First
+
+The system checks lateral position as well as distance. Match the leading car smoothly instead of making a large last-second drift.
+
+### Wait for the Bright Car
+
+After roughly half a second of stable pursuit, the trailing car brightens and BOOST recovery begins. Boosting out too early gives up the recovery.
+
+### Choose the Pass or Tackle
+
+Remain behind to collect energy, or move alongside to attack. Read the opponent's gauge and the next active gate before choosing.
+
+## 16. Catching the Leader
 
 ### Do Not Empty the Gauge
 
@@ -303,7 +324,7 @@ Chasing the CPU across every lane can increase the gap. Skip a distant gate, tak
 
 An inside position makes it easier to push the opponent outward. The moment you catch the leader is often your best chance to take control of the race.
 
-## 16. Racing the CPU
+## 17. Racing the CPU
 
 ### LEVEL 1-2
 
@@ -317,7 +338,7 @@ The CPU uses standard boost bursts. Save your own boost until its burst ends, th
 
 Pure speed is not enough. Skip poor gate approaches, use rail-side tackles, and turn catch-up recovery into carefully timed boosts.
 
-## 17. Two-Player Strategy
+## 18. Two-Player Strategy
 
 ### Avoid Keyboard Ghosting
 

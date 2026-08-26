@@ -50,6 +50,8 @@ class GameModeRace : public GameMode {
   int countdown_drawn_stage_[2];
   int boost_ready_[PLAYER_COUNT];
   int course_drawn_[2];
+  int slipstream_frames_[PLAYER_COUNT];
+  int slipstream_active_[PLAYER_COUNT];
 
   void initialize_trig_table();
   void prepare_intro_frame(int frame);
@@ -67,6 +69,7 @@ class GameModeRace : public GameMode {
   void draw_hud(int page);
   void draw_boost_gauge(int page, int player);
   void update_gates(const int *previous_angles);
+  void update_slipstream();
   void update_catchup_boost();
   void resolve_tackle();
   void draw_gate(const Vec2s track[2][TRACK_SEGMENTS],

@@ -8,6 +8,11 @@ TRACK_SEGMENTS = 8
 FIELD_W = 512
 VIEW_CENTER_Y = 278
 PROJECTION_SCALE = 170.0
+REPLAY_LEFT = 28
+REPLAY_TOP = 104
+REPLAY_RIGHT = 484
+REPLAY_BOTTOM = 410
+FIT_MARGIN = 4
 INNER_RADIUS = 5.2
 OUTER_RADIUS = 8.8
 TRACK_RADIUS = 7.0
@@ -65,11 +70,10 @@ def project(view, point):
     if transformed[2] >= -1.0:
         raise ValueError("title point is behind the near plane")
     scale = PROJECTION_SCALE / -transformed[2]
-    x = int(FIELD_W * 0.5 + transformed[0] * scale)
-    y = int(VIEW_CENTER_Y - transformed[1] * scale)
-    if x < 24 or x > 487 or y < 122 or y > 409:
-        raise ValueError("title point is outside the replay viewport")
-    return (x, y)
+    return (
+        FIELD_W * 0.5 + transformed[0] * scale,
+        VIEW_CENTER_Y - transformed[1] * scale,
+    )
 
 
 def smooth(value):
@@ -172,12 +176,76 @@ def make_frame(frame):
     return track, cars, flags
 
 
+def frame_points(frame):
+    track, cars, _ = frame
+    return [point for ring in track for point in ring] + [
+        point for car in cars for point in car
+    ]
+
+
+def bounds_for_frames(frames):
+    points = [point for frame in frames for point in frame_points(frame)]
+    return (
+        min(point[0] for point in points),
+        min(point[1] for point in points),
+        max(point[0] for point in points),
+        max(point[1] for point in points),
+    )
+
+
+def fit_point(point, source_bounds, scale):
+    left, top, right, bottom = source_bounds
+    source_center_x = (left + right) * 0.5
+    source_center_y = (top + bottom) * 0.5
+    target_center_x = (REPLAY_LEFT + REPLAY_RIGHT) * 0.5
+    target_center_y = (REPLAY_TOP + REPLAY_BOTTOM) * 0.5
+    return (
+        int(round(target_center_x + (point[0] - source_center_x) * scale)),
+        int(round(target_center_y + (point[1] - source_center_y) * scale)),
+    )
+
+
+def fit_shots(frames):
+    fitted = list(frames)
+    shot_info = []
+    shot_count = (FRAME_COUNT + SHOT_LENGTH - 1) // SHOT_LENGTH
+    target_width = REPLAY_RIGHT - REPLAY_LEFT - FIT_MARGIN * 2
+    target_height = REPLAY_BOTTOM - REPLAY_TOP - FIT_MARGIN * 2
+    for shot in range(shot_count):
+        first = shot * SHOT_LENGTH
+        last = min(first + SHOT_LENGTH, FRAME_COUNT)
+        source_bounds = bounds_for_frames(frames[first:last])
+        width = source_bounds[2] - source_bounds[0]
+        height = source_bounds[3] - source_bounds[1]
+        scale = min(target_width / width, target_height / height)
+        for frame in range(first, last):
+            track, cars, flags = frames[frame]
+            fitted_track = [
+                [fit_point(point, source_bounds, scale) for point in ring]
+                for ring in track
+            ]
+            fitted_cars = [
+                [fit_point(point, source_bounds, scale) for point in car]
+                for car in cars
+            ]
+            fitted[frame] = (fitted_track, fitted_cars, flags)
+        fitted_bounds = bounds_for_frames(fitted[first:last])
+        if (fitted_bounds[0] < REPLAY_LEFT or
+                fitted_bounds[1] < REPLAY_TOP or
+                fitted_bounds[2] > REPLAY_RIGHT or
+                fitted_bounds[3] > REPLAY_BOTTOM):
+            raise ValueError("fitted replay shot is outside the viewport")
+        shot_info.append((source_bounds, fitted_bounds, scale))
+    return fitted, shot_info
+
+
 def points_initializer(points):
     return "{ " + ", ".join("{%d, %d}" % point for point in points) + " }"
 
 
 def generate():
-    frames = [make_frame(frame) for frame in range(FRAME_COUNT)]
+    raw_frames = [make_frame(frame) for frame in range(FRAME_COUNT)]
+    frames, shot_info = fit_shots(raw_frames)
     lines = [
         "#ifndef WDR_DEMODAT_H",
         "#define WDR_DEMODAT_H",
@@ -187,6 +255,7 @@ def generate():
         "enum {",
         "  DEMO_FRAME_COUNT = %d," % FRAME_COUNT,
         "  DEMO_SHOT_LENGTH = %d," % SHOT_LENGTH,
+        "  DEMO_SHOT_COUNT = %d," % len(shot_info),
         "  DEMO_TRACK_SEGMENTS = %d," % TRACK_SEGMENTS,
         "  DEMO_CAR_VERTICES = 8,",
         "  DEMO_CAR_EDGES = 12,",
@@ -202,7 +271,15 @@ def generate():
         "",
         "static const DemoFrame kDemoFrames[DEMO_FRAME_COUNT] = {",
     ]
-    for track, cars, flags in frames:
+    for frame_index, (track, cars, flags) in enumerate(frames):
+        if frame_index % SHOT_LENGTH == 0:
+            shot = frame_index // SHOT_LENGTH
+            source, fitted, scale = shot_info[shot]
+            lines.append(
+                "  /* shot %d: source %.1f,%.1f-%.1f,%.1f; "
+                "scale %.3f; fitted %d,%d-%d,%d */" % (
+                    shot, source[0], source[1], source[2], source[3],
+                    scale, fitted[0], fitted[1], fitted[2], fitted[3]))
         lines.extend((
             "  {",
             "    {",

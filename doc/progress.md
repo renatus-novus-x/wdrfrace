@@ -361,3 +361,25 @@
 - Fixed CPU-level digits accumulating on the title screen by erasing the previous page-specific menu strings in black before drawing the new level.
 - Uses exact text erasure instead of a rectangular clear, preserving the incremental title renderer.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-26: Proximity-based slipstream boost recovery
+
+- Added slipstream detection for the trailing car within the near-gap region below one sixteenth of a lap.
+- Requires the trailing car to remain outside tackle-contact distance and within 24 lane-offset units of the leader.
+- Activates after 10 consecutive fixed updates, approximately half a second at the 20 Hz physics rate.
+- Recovers 8 boost points per fixed update while active without changing speed, acceleration, or maximum-speed values.
+- Resets immediately when the car leaves the distance window, changes away from the leader's lane, enters contact range, or becomes the leader.
+- Keeps the existing distance-linked catch-up recovery for larger gaps, so the two recovery systems do not stack.
+- Reuses the high-brightness car colors as a zero-edge visual indicator while slipstream recovery is active.
+- Applies the same rule to human and CPU cars in one-player and two-player races.
+- Updated the Japanese and English manuals with slipstream rules and strategy guidance.
+
+## 2026-08-26: Per-shot title wireframe framing
+
+- Added build-time two-dimensional BoundingBox fitting to all four title-screen camera shots.
+- Includes the floor grid, animated light lines, and both three-dimensional car models when calculating each shot's bounds.
+- Fits every shot uniformly into the reserved `x=28..484`, `y=140..374` viewport between the title graphics and lower menu.
+- Uses one shared scale and translation per shot, preserving the original camera composition without frame-to-frame size changes.
+- Emits source bounds, fitted bounds, and scale values as comments in the generated `herodat.h` for future tuning.
+- Adds no runtime projection, geometry, or drawing cost because all adjusted screen coordinates remain precomputed at build time.
+- Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.

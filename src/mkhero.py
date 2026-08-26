@@ -9,6 +9,9 @@ CX, CY = 255.5, 258.5
 SCALE = 230.0
 FRAMES = 160
 SHOT_LENGTH = 40
+HERO_LEFT, HERO_RIGHT = 28, 484
+HERO_TOP, HERO_BOTTOM = 140, 374
+HERO_MARGIN = 4
 
 
 def sub(a, b):
@@ -104,6 +107,60 @@ def format_line(segment):
         segment[0][0], segment[0][1], segment[1][0], segment[1][1])
 
 
+def fit_shot(shot):
+    floor, cars, lights = shot
+    groups = floor + cars + [lights]
+    points = [point for group in groups for segment in group
+              if segment[0][0] != HIDDEN for point in segment]
+    if not points:
+        raise ValueError("hero shot has no visible geometry")
+
+    source_left = min(point[0] for point in points)
+    source_right = max(point[0] for point in points)
+    source_top = min(point[1] for point in points)
+    source_bottom = max(point[1] for point in points)
+    target_left = HERO_LEFT + HERO_MARGIN
+    target_right = HERO_RIGHT - HERO_MARGIN
+    target_top = HERO_TOP + HERO_MARGIN
+    target_bottom = HERO_BOTTOM - HERO_MARGIN
+    scale = min((target_right - target_left) /
+                float(source_right - source_left),
+                (target_bottom - target_top) /
+                float(source_bottom - source_top))
+    source_cx = (source_left + source_right) * 0.5
+    source_cy = (source_top + source_bottom) * 0.5
+    target_cx = (target_left + target_right) * 0.5
+    target_cy = (target_top + target_bottom) * 0.5
+
+    def transform_group(group):
+        transformed = []
+        for segment in group:
+            if segment[0][0] == HIDDEN:
+                transformed.append(segment)
+                continue
+            transformed.append(tuple(
+                (round(target_cx + (point[0] - source_cx) * scale),
+                 round(target_cy + (point[1] - source_cy) * scale))
+                for point in segment))
+        return transformed
+
+    fitted = ([transform_group(group) for group in floor],
+              [transform_group(group) for group in cars],
+              transform_group(lights))
+    fitted_points = [point for group in fitted[0] + fitted[1] + [fitted[2]]
+                     for segment in group if segment[0][0] != HIDDEN
+                     for point in segment]
+    fitted_bounds = (min(point[0] for point in fitted_points),
+                     min(point[1] for point in fitted_points),
+                     max(point[0] for point in fitted_points),
+                     max(point[1] for point in fitted_points))
+    if (fitted_bounds[0] < HERO_LEFT or fitted_bounds[2] > HERO_RIGHT or
+            fitted_bounds[1] < HERO_TOP or fitted_bounds[3] > HERO_BOTTOM):
+        raise ValueError("fitted hero shot exceeds its viewport")
+    source_bounds = (source_left, source_top, source_right, source_bottom)
+    return fitted, (source_bounds, scale, fitted_bounds)
+
+
 shots = []
 cameras = [
     ((8.5, 4.2, 10.0), (0.0, 0.35, 0.0)),
@@ -128,6 +185,11 @@ for eye, target in cameras:
         lights.append(line((-0.42, 0.03, z), (0.42, 0.03, z), view))
     shots.append((floor, cars, lights))
 
+fit_info = []
+for index, shot in enumerate(shots):
+    shots[index], info = fit_shot(shot)
+    fit_info.append(info)
+
 with open(OUT, "w", newline="\n") as out:
     out.write("#ifndef WDRFRACE_HERODAT_H\n")
     out.write("#define WDRFRACE_HERODAT_H\n\n")
@@ -147,6 +209,10 @@ with open(OUT, "w", newline="\n") as out:
     out.write("  unsigned char light_phase;\n")
     out.write("  unsigned char pulse_phase;\n")
     out.write("};\n\n")
+    out.write("// Per-shot screen-space fit includes floor, lights, and both cars.\n")
+    for index, (source, scale, fitted) in enumerate(fit_info):
+        out.write("// Shot %d: source %s, scale %.4f, fitted %s.\n" %
+                  (index, source, scale, fitted))
     out.write("static const HeroShot kHeroShots[HERO_SHOT_COUNT] = {\n")
     for floor, cars, lights in shots:
         out.write("  {\n    {\n")
