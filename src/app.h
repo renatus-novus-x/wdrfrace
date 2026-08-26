@@ -12,6 +12,7 @@
 #include "gmresult.h"
 #include "gmtest.h"
 #include "gmtitle.h"
+#include "sound.h"
 
 class Application {
  private:
@@ -23,6 +24,8 @@ class Application {
   int render_due_;
   int front_page_;
   int back_page_;
+  int mode_initializing_;
+  int page_flip_pending_;
   GameModeId current_mode_id_;
   GameMode *current_mode_;
   GameModeTitle title_mode_;
@@ -32,9 +35,10 @@ class Application {
   GameModeTest test_mode_;
   GameModeRace race_mode_;
   GameModeResult result_mode_;
+  SoundEffect sound_;
 
   GameMode *mode_for(GameModeId id);
-  int initialize_current_mode();
+  int begin_current_mode();
 
  public:
   int initialize();

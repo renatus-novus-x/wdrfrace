@@ -29,7 +29,8 @@ GameModeCourse::GameModeCourse()
     : selected_course_(0),
       frame_(0),
       input_released_(0),
-      direction_down_(0) {
+      direction_down_(0),
+      select_sound_pending_(0) {
   for (int page = 0; page < 2; ++page) {
     drawn_course_[page] = -1;
     drawn_frame_[page] = -1;
@@ -42,6 +43,7 @@ int GameModeCourse::initialize() {
   input_.update();
   input_released_ = !input_.confirm();
   direction_down_ = input_.menu_left() || input_.menu_right();
+  select_sound_pending_ = 0;
   frame_ = 0;
   for (int page = 0; page < 2; ++page) {
     drawn_course_[page] = -1;
@@ -62,6 +64,7 @@ GameModeId GameModeCourse::update() {
     } else {
       selected_course_ = (selected_course_ + 1) % COURSE_PREVIEW_COUNT;
     }
+    select_sound_pending_ = 1;
   }
   direction_down_ = direction;
 
@@ -73,6 +76,12 @@ GameModeId GameModeCourse::update() {
 
   frame_ = (frame_ + 1) % COURSE_PREVIEW_FRAME_COUNT;
   return GAME_MODE_COURSE_SELECT;
+}
+
+int GameModeCourse::consume_select_sound() {
+  const int pending = select_sound_pending_;
+  select_sound_pending_ = 0;
+  return pending;
 }
 
 void GameModeCourse::draw_scene() const {

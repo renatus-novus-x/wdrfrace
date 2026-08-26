@@ -40,7 +40,8 @@ GameModeTitle::GameModeTitle()
       prompt_frame_(0),
       prompt_visible_(1),
       idle_frames_(0),
-      frame_(0) {
+      frame_(0),
+      select_sound_pending_(0) {
   for (int page = 0; page < 2; ++page) {
     drawn_frame_[page] = -1;
     prompt_drawn_visible_[page] = -1;
@@ -58,6 +59,7 @@ int GameModeTitle::initialize() {
   prompt_visible_ = 1;
   idle_frames_ = 0;
   frame_ = 0;
+  select_sound_pending_ = 0;
   for (int page = 0; page < 2; ++page) {
     drawn_frame_[page] = -1;
     prompt_drawn_visible_[page] = -1;
@@ -73,19 +75,23 @@ GameModeId GameModeTitle::update() {
   input_.update();
   const int direction = input_.menu_up() || input_.menu_down();
   if (direction && !direction_down_) {
+    const int previous_players = selected_players_;
     if (input_.menu_up()) selected_players_ = 1;
     if (input_.menu_down()) selected_players_ = 2;
+    if (selected_players_ != previous_players) select_sound_pending_ = 1;
   }
   direction_down_ = direction;
   const int level_direction = input_.menu_left() || input_.menu_right();
   if (selected_players_ == 1 && level_direction &&
       !level_direction_down_) {
+    const int previous_level = selected_cpu_level_;
     if (input_.menu_left() && selected_cpu_level_ > 1) {
       --selected_cpu_level_;
     }
     if (input_.menu_right() && selected_cpu_level_ < 5) {
       ++selected_cpu_level_;
     }
+    if (selected_cpu_level_ != previous_level) select_sound_pending_ = 1;
   }
   level_direction_down_ = level_direction;
   const int confirm = input_.confirm();
@@ -110,10 +116,20 @@ GameModeId GameModeTitle::update() {
   return GAME_MODE_TITLE;
 }
 
+int GameModeTitle::consume_select_sound() {
+  const int pending = select_sound_pending_;
+  select_sound_pending_ = 0;
+  return pending;
+}
+
 void GameModeTitle::render(int page) {
   if (drawn_frame_[page] < 0) {
     draw_scene();
-    draw_garage_frame(page, kHeroFrames[frame_], kHeroFrames[frame_]);
+    draw_static_shot(kHeroFrames[frame_]);
+    if (kHeroFrames[frame_].flags & HERO_FLAG_CUT) {
+      draw_cut_markers(COLOR_CYAN);
+      cut_markers_visible_[page] = 1;
+    }
     drawn_frame_[page] = frame_;
   } else if (drawn_frame_[page] != frame_) {
     draw_garage_frame(page, kHeroFrames[drawn_frame_[page]],
@@ -175,7 +191,7 @@ void GameModeTitle::draw_player_menu(int players, int cpu_level,
 }
 
 void GameModeTitle::clear_garage() {
-  screen_fill(16, 124, 480, 270, COLOR_BLACK);
+  screen_fill(16, 124, 480, 258, COLOR_BLACK);
 }
 
 void GameModeTitle::draw_edges(const Vec2s (*edges)[2], int count,

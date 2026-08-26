@@ -398,3 +398,22 @@
 - Emits source bounds, fitted bounds, and scale values as comments in the generated `herodat.h` for future tuning.
 - Adds no runtime projection, geometry, or drawing cost because all adjusted screen coordinates remain precomputed at build time.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
+
+## 2026-08-26: Non-blocking menu audio and staged race startup
+
+- Added a non-blocking YM2151/OPM sound-effect driver on channel 7 for menu feedback without busy waits or delays in the game loop.
+- Added a bright, rising metallic confirmation sound lasting approximately 0.25 seconds.
+- Added a lower, descending cancellation sound lasting approximately 0.15 seconds so confirmation and cancellation are clearly distinguishable.
+- Added a short science-fiction-style selection sound lasting approximately 0.1 seconds.
+- Plays the selection sound only when the title player count or CPU level actually changes, and when the course selection moves left or right.
+- Starts confirmation and cancellation sounds immediately when the input transition is detected, before mode finalization or preparation begins.
+- Changed page presentation so a completed back page is displayed at the next VBlank instead of waiting for another VBlank inside `render()`.
+- Keeps the previous front page visible while a new mode is being prepared, allowing VBlank handling and sound updates to continue normally.
+- Added `GameMode::initialize_step()` so modes can divide expensive preparation across multiple VBlank intervals without rendering or updating gameplay early.
+- Split the race trigonometric table generation into eight 32-entry steps instead of calculating all 256 floating-point entries in one call.
+- Moved race camera setup and initialization of each car into separate preparation frames.
+- Added an initialization failure result distinct from an incomplete preparation step.
+- Fixed the title floor disappearing when the first displayed hero frame was not a cut frame by always drawing the complete static shot on a page's first render.
+- Reduced the title garage clearing area so camera-cut cleanup no longer erases the `UP DOWN MODE  LEFT RIGHT LEVEL` instruction line.
+- Preserved the existing fixed 20 Hz simulation, two-page graphics buffering, and precomputed race-introduction geometry.
+- Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.

@@ -54,6 +54,20 @@ int set_60hz() {
   return 0;
 }
 
+int is_confirm_transition(GameModeId current, GameModeId next) {
+  return (current == GAME_MODE_TITLE && next == GAME_MODE_COURSE_SELECT) ||
+         (current == GAME_MODE_COURSE_SELECT &&
+          next == GAME_MODE_HOW_TO_PLAY) ||
+         (current == GAME_MODE_HOW_TO_PLAY && next == GAME_MODE_RACE);
+}
+
+int is_cancel_transition(GameModeId current, GameModeId next) {
+  return (current == GAME_MODE_COURSE_SELECT && next == GAME_MODE_TITLE) ||
+         (current == GAME_MODE_HOW_TO_PLAY &&
+          next == GAME_MODE_COURSE_SELECT) ||
+         (current == GAME_MODE_RACE && next == GAME_MODE_TITLE);
+}
+
 }  // namespace
 
 GameMode *Application::mode_for(GameModeId id) {
@@ -67,19 +81,10 @@ GameMode *Application::mode_for(GameModeId id) {
   return 0;
 }
 
-int Application::initialize_current_mode() {
+int Application::begin_current_mode() {
   if (!current_mode_ || !current_mode_->initialize()) return 0;
-
-  _iocs_apage(back_page_);
-  current_mode_->render(back_page_);
-  if (wait_vdisp() != 0) return 0;
-  _iocs_vpage(1 << back_page_);
-  const int old_front = front_page_;
-  front_page_ = back_page_;
-  back_page_ = old_front;
-
-  _iocs_apage(back_page_);
-  current_mode_->render(back_page_);
+  mode_initializing_ = 1;
+  render_due_ = 0;
   return 1;
 }
 
@@ -87,7 +92,7 @@ int Application::initialize() {
   current_mode_ = 0;
   running_ = 0;
   paused_ = 0;
-  frame_accumulator_cs_ = FIXED_FRAME_STEP_CS;
+  frame_accumulator_cs_ = 0;
   render_due_ = 0;
   old_mode_ = _iocs_crtmod(-1);
   _iocs_crtmod(8);
@@ -96,16 +101,19 @@ int Application::initialize() {
   screen_palette_initialize();
   front_page_ = 0;
   back_page_ = 1;
+  mode_initializing_ = 0;
+  page_flip_pending_ = 0;
   _iocs_apage(front_page_);
   _iocs_vpage(1 << front_page_);
   _iocs_b_curoff();
+  sound_.initialize();
   if (set_60hz() != 0) {
     finalize();
     return 0;
   }
   current_mode_id_ = GAME_MODE_TITLE;
   current_mode_ = mode_for(current_mode_id_);
-  if (!initialize_current_mode()) {
+  if (!begin_current_mode()) {
     finalize();
     return 0;
   }
@@ -120,6 +128,13 @@ int Application::update() {
     running_ = 0;
     return 0;
   }
+  if (page_flip_pending_) {
+    _iocs_vpage(1 << back_page_);
+    const int old_front = front_page_;
+    front_page_ = back_page_;
+    back_page_ = old_front;
+    page_flip_pending_ = 0;
+  }
 
   struct iocs_time now = _iocs_ontime();
   long elapsed = ontime_diff_cs(previous_time_, now);
@@ -130,13 +145,23 @@ int Application::update() {
 
   frame_accumulator_cs_ += frame_dt_cs;
   render_due_ = 0;
+  const int preparing = mode_initializing_;
   while (frame_accumulator_cs_ >= FIXED_FRAME_STEP_CS) {
     frame_accumulator_cs_ -= FIXED_FRAME_STEP_CS;
     render_due_ = 1;
+    sound_.update();
+    if (preparing) continue;
     if (paused_) continue;
 
     GameModeId next = current_mode_->update();
+    if (current_mode_->consume_select_sound()) sound_.play_select();
     if (next == current_mode_id_) continue;
+
+    if (is_confirm_transition(current_mode_id_, next)) {
+      sound_.play_confirm();
+    } else if (is_cancel_transition(current_mode_id_, next)) {
+      sound_.play_cancel();
+    }
 
     if (current_mode_id_ == GAME_MODE_TITLE &&
         next == GAME_MODE_COURSE_SELECT) {
@@ -166,30 +191,35 @@ int Application::update() {
       return 0;
     }
     current_mode_ = mode_for(next);
-    running_ = current_mode_ && initialize_current_mode();
+    running_ = current_mode_ && begin_current_mode();
     if (!running_) return 0;
+  }
+
+  if (preparing) {
+    const int status = current_mode_->initialize_step();
+    if (status < 0) {
+      running_ = 0;
+      return 0;
+    }
+    if (status > 0) mode_initializing_ = 0;
+    render_due_ = 0;
   }
 
   return 1;
 }
 
 void Application::render() {
-  if (current_mode_ && render_due_) {
+  if (current_mode_ && render_due_ && !page_flip_pending_ &&
+      !mode_initializing_) {
     _iocs_apage(back_page_);
     current_mode_->render(back_page_);
-    if (wait_vdisp() != 0) {
-      running_ = 0;
-      return;
-    }
-    _iocs_vpage(1 << back_page_);
-    const int old_front = front_page_;
-    front_page_ = back_page_;
-    back_page_ = old_front;
+    page_flip_pending_ = 1;
     render_due_ = 0;
   }
 }
 
 void Application::finalize() {
+  sound_.finalize();
   if (current_mode_) {
     current_mode_->finalize();
     current_mode_ = 0;

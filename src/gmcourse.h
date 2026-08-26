@@ -14,6 +14,7 @@ class GameModeCourse : public GameMode {
   int frame_;
   int input_released_;
   int direction_down_;
+  int select_sound_pending_;
   int drawn_course_[2];
   int drawn_frame_[2];
 
@@ -29,6 +30,7 @@ class GameModeCourse : public GameMode {
   int course_id() const;
   virtual int initialize();
   virtual GameModeId update();
+  virtual int consume_select_sound();
   virtual void render(int page);
   virtual void finalize();
 };

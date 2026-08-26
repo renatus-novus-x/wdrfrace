@@ -18,7 +18,9 @@ class GameMode {
  public:
   virtual ~GameMode();
   virtual int initialize();
+  virtual int initialize_step();
   virtual GameModeId update();
+  virtual int consume_select_sound();
   virtual void render(int page);
   virtual void finalize();
 };

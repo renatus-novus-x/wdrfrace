@@ -12,6 +12,7 @@ class GameModeTitle : public GameMode {
   GameModeTitle();
   virtual int initialize();
   virtual GameModeId update();
+  virtual int consume_select_sound();
   virtual void render(int page);
   virtual void finalize();
   int player_count() const;
@@ -47,6 +48,7 @@ class GameModeTitle : public GameMode {
   int menu_drawn_players_[2];
   int menu_drawn_cpu_level_[2];
   int cut_markers_visible_[2];
+  int select_sound_pending_;
 };
 
 #endif

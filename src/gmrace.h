@@ -30,6 +30,10 @@ class GameModeRace : public GameMode {
   Car cars_[PLAYER_COUNT];
   Input input_;
   float sin_table_[TRIG_TABLE_SIZE];
+  int initialize_phase_;
+  int trig_index_;
+  float trig_s_;
+  float trig_c_;
   int intro_frame_;
   int intro_drawn_frame_[2];
   int player_count_;
@@ -55,7 +59,7 @@ class GameModeRace : public GameMode {
   int slipstream_frames_[PLAYER_COUNT];
   int slipstream_active_[PLAYER_COUNT];
 
-  void initialize_trig_table();
+  int initialize_trig_table_step();
   void prepare_intro_frame(int frame);
   void draw_ring(const Vec2s *ring, iocs_color_t color) const;
   void draw_track(const Vec2s track[2][TRACK_SEGMENTS],
@@ -91,6 +95,7 @@ class GameModeRace : public GameMode {
   RaceWinner winner() const;
   int lap(int player) const;
   virtual int initialize();
+  virtual int initialize_step();
   virtual GameModeId update();
   virtual void render(int page);
   virtual void finalize();

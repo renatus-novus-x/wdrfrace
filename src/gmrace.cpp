@@ -72,7 +72,11 @@ void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
 }  // namespace
 
 GameModeRace::GameModeRace()
-    : player_count_(1),
+    : initialize_phase_(0),
+      trig_index_(0),
+      trig_s_(0.0f),
+      trig_c_(1.0f),
+      player_count_(1),
       cpu_level_(3),
       cpu_decision_timer_(0),
       cpu_target_offset_(0),
@@ -124,17 +128,18 @@ int GameModeRace::lap(int player) const {
   return player >= 0 && player < PLAYER_COUNT ? cars_[player].lap() : 0;
 }
 
-void GameModeRace::initialize_trig_table() {
+int GameModeRace::initialize_trig_table_step() {
   const float step_sin = 0.024541229f;
   const float step_cos = 0.999698819f;
-  float s = 0.0f;
-  float c = 1.0f;
-  for (int i = 0; i < TRIG_TABLE_SIZE; ++i) {
-    sin_table_[i] = s;
-    const float next_s = s * step_cos + c * step_sin;
-    c = c * step_cos - s * step_sin;
-    s = next_s;
+  const int end = trig_index_ + 32 < TRIG_TABLE_SIZE ?
+      trig_index_ + 32 : TRIG_TABLE_SIZE;
+  while (trig_index_ < end) {
+    sin_table_[trig_index_++] = trig_s_;
+    const float next_s = trig_s_ * step_cos + trig_c_ * step_sin;
+    trig_c_ = trig_c_ * step_cos - trig_s_ * step_sin;
+    trig_s_ = next_s;
   }
+  return trig_index_ >= TRIG_TABLE_SIZE;
 }
 
 void GameModeRace::prepare_intro_frame(int frame) {
@@ -533,7 +538,10 @@ void GameModeRace::draw_slip_indicator(int page, int player) {
 }
 
 int GameModeRace::initialize() {
-  initialize_trig_table();
+  initialize_phase_ = 0;
+  trig_index_ = 0;
+  trig_s_ = 0.0f;
+  trig_c_ = 1.0f;
   intro_frame_ = 0;
   intro_drawn_frame_[0] = -1;
   intro_drawn_frame_[1] = -1;
@@ -571,13 +579,32 @@ int GameModeRace::initialize() {
     course_drawn_[page] = 0;
   }
 
-  const Vec3f eye = {0.0f, 11.0f, 14.0f};
-  const Vec3f target = {0.0f, 0.0f, 0.0f};
-  const Vec3f up = {0.0f, 1.0f, 0.0f};
-  if (!camera_.look_at(eye, target, up)) return 0;
+  return 1;
+}
 
-  cars_[0].initialize(0, -42, course_id_);
-  cars_[1].initialize(0, 42, course_id_);
+int GameModeRace::initialize_step() {
+  if (initialize_phase_ == 0) {
+    if (!initialize_trig_table_step()) return 0;
+    initialize_phase_ = 1;
+    return 0;
+  }
+  if (initialize_phase_ == 1) {
+    const Vec3f eye = {0.0f, 11.0f, 14.0f};
+    const Vec3f target = {0.0f, 0.0f, 0.0f};
+    const Vec3f up = {0.0f, 1.0f, 0.0f};
+    if (!camera_.look_at(eye, target, up)) return -1;
+    initialize_phase_ = 2;
+    return 0;
+  }
+  if (initialize_phase_ == 2) {
+    cars_[0].initialize(0, -42, course_id_);
+    initialize_phase_ = 3;
+    return 0;
+  }
+  if (initialize_phase_ == 3) {
+    cars_[1].initialize(0, 42, course_id_);
+    initialize_phase_ = 4;
+  }
   return 1;
 }
 
