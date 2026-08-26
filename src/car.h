@@ -26,6 +26,7 @@ class Car {
   int boosting_;
   int drift_;
   int lap_;
+  int course_id_;
   Vec2s previous_[2][VERTEX_COUNT];
   Vec2s current_[VERTEX_COUNT];
   uint8_t previous_visible_[2][VERTEX_COUNT];
@@ -37,7 +38,7 @@ class Car {
                  iocs_color_t color) const;
 
  public:
-  void initialize(int angle, int offset);
+  void initialize(int angle, int offset, int course_id);
   void update(const CarInput &input);
   void prepare_render(const Camera &camera, const float *sin_table);
   void prepare_screen(const Vec2s *points);

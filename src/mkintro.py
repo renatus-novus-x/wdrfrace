@@ -3,6 +3,7 @@
 import math
 
 FRAME_COUNT = 61
+COURSE_COUNT = 3
 TRACK_SEGMENTS = 12
 TRIG_TABLE_SIZE = 256
 INNER_RADIUS = 5.2
@@ -83,12 +84,23 @@ def make_trig_table():
     return result
 
 
-def make_car_points(offset, trig):
+def course_point(course, sine, cosine, radius):
+    x = sine * radius
+    z = cosine * radius
+    if course == 1:
+        return (x * 1.12, z * 0.82)
+    if course == 2:
+        cosine3 = 4.0 * cosine * cosine * cosine - 3.0 * cosine
+        scale = 1.0 + 0.11 * cosine3
+        return (x * scale, z * scale)
+    return (x, z)
+
+
+def make_car_points(course, offset, trig):
     sine = trig[0]
     cosine = trig[TRIG_TABLE_SIZE // 4]
     radius = TRACK_RADIUS + offset * LANE_SCALE
-    center_x = sine * radius
-    center_z = cosine * radius
+    center_x, center_z = course_point(course, sine, cosine, radius)
     side_x = sine * CAR_HALF_WIDTH
     side_z = cosine * CAR_HALF_WIDTH
     front_x = cosine * CAR_HALF_LENGTH
@@ -119,7 +131,7 @@ def make_car_points(offset, trig):
     )
 
 
-def make_frame(frame, trig, car_models):
+def make_frame(course, frame, trig, car_models):
     t = frame / float(FRAME_COUNT - 1)
     eased = t * t * (3.0 - 2.0 * t)
     height = 20.0 + (11.0 - 20.0) * eased
@@ -136,12 +148,11 @@ def make_frame(frame, trig, car_models):
         ring = []
         for segment in range(TRACK_SEGMENTS):
             index = segment * TRIG_TABLE_SIZE // TRACK_SEGMENTS
-            point = (
-                trig[index] * radius,
-                0.0,
-                trig[(index + TRIG_TABLE_SIZE // 4) &
-                     (TRIG_TABLE_SIZE - 1)] * radius,
-            )
+            sine = trig[index]
+            cosine = trig[(index + TRIG_TABLE_SIZE // 4) &
+                          (TRIG_TABLE_SIZE - 1)]
+            x, z = course_point(course, sine, cosine, radius)
+            point = (x, 0.0, z)
             ring.append(project(view, point))
         track.append(ring)
 
@@ -158,9 +169,12 @@ def points_initializer(points):
 
 def generate():
     trig = make_trig_table()
-    car_models = (make_car_points(-42, trig), make_car_points(42, trig))
-    frames = [make_frame(frame, trig, car_models)
-              for frame in range(FRAME_COUNT)]
+    courses = []
+    for course in range(COURSE_COUNT):
+        car_models = (make_car_points(course, -42, trig),
+                      make_car_points(course, 42, trig))
+        courses.append([make_frame(course, frame, trig, car_models)
+                        for frame in range(FRAME_COUNT)])
 
     lines = [
         "#ifndef WDR_INTRODAT_H",
@@ -169,6 +183,7 @@ def generate():
         "#include \"math3d.h\"",
         "",
         "enum {",
+        "  INTRO_COURSE_COUNT = %d," % COURSE_COUNT,
         "  INTRO_FRAME_COUNT = %d," % FRAME_COUNT,
         "  INTRO_TRACK_SEGMENTS = %d," % TRACK_SEGMENTS,
         "  INTRO_CAR_VERTICES = 8,",
@@ -179,21 +194,25 @@ def generate():
         "  Vec2s cars[2][INTRO_CAR_VERTICES];",
         "};",
         "",
-        "static const IntroFrame kIntroFrames[INTRO_FRAME_COUNT] = {",
+        "static const IntroFrame "
+        "kIntroFrames[INTRO_COURSE_COUNT][INTRO_FRAME_COUNT] = {",
     ]
-    for track, cars in frames:
-        lines.extend((
-            "  {",
-            "    {",
-            "      %s," % points_initializer(track[0]),
-            "      %s" % points_initializer(track[1]),
-            "    },",
-            "    {",
-            "      %s," % points_initializer(cars[0]),
-            "      %s" % points_initializer(cars[1]),
-            "    },",
-            "  },",
-        ))
+    for frames in courses:
+        lines.append("  {")
+        for track, cars in frames:
+            lines.extend((
+                "    {",
+                "      {",
+                "        %s," % points_initializer(track[0]),
+                "        %s" % points_initializer(track[1]),
+                "      },",
+                "      {",
+                "        %s," % points_initializer(cars[0]),
+                "        %s" % points_initializer(cars[1]),
+                "      },",
+                "    },",
+            ))
+        lines.append("  },")
     lines.extend((
         "};",
         "",

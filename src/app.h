@@ -5,6 +5,7 @@
 #include <x68k/iocs.h>
 
 #include "gmode.h"
+#include "gmcourse.h"
 #include "gmctrl.h"
 #include "gmdemo.h"
 #include "gmrace.h"
@@ -26,6 +27,7 @@ class Application {
   GameMode *current_mode_;
   GameModeTitle title_mode_;
   GameModeDemo demo_mode_;
+  GameModeCourse course_mode_;
   GameModeControls controls_mode_;
   GameModeTest test_mode_;
   GameModeRace race_mode_;

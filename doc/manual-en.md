@@ -18,18 +18,20 @@ This manual explains how to start the game, control your car, understand the rac
 1. Story
 2. Object of the Game
 3. Starting the Game
-4. Controls
-5. Reading the Race Screen
-6. Game Rules
-7. Cars and Track Systems
-8. CPU LEVEL
-9. Basic Technique
-10. Boost Strategy
-11. Active Gate Strategy
-12. Drift Tackle Strategy
-13. Catching the Leader
-14. Racing the CPU
-15. Two-Player Strategy
+4. Course Selection
+5. Controls
+6. Reading the Race Screen
+7. Game Rules
+8. Cars and Track Systems
+9. CPU LEVEL
+10. Course Strategy
+11. Basic Technique
+12. Boost Strategy
+13. Active Gate Strategy
+14. Drift Tackle Strategy
+15. Catching the Leader
+16. Racing the CPU
+17. Two-Player Strategy
 
 ---
 
@@ -79,9 +81,15 @@ CPU LEVEL is used in 1 PLAYER. The default setting is LEVEL 3.
 
 If the title screen is left idle, DEMO REPLAY begins. Press any key or use either gamepad to return to the title.
 
+After confirming the mode, the game advances in this order:
+
+```text
+TITLE  ->  SELECT COURSE  ->  HOW TO PLAY  ->  RACE
+```
+
 ### HOW TO PLAY Screen
 
-After checking the controls, press `SPACE` or gamepad Button 1 to begin. Press `ESC` to return to the title.
+After checking the controls, press `SPACE` or gamepad Button 1 to begin. Press `ESC` to return to course selection.
 
 ### Start Sequence
 
@@ -93,7 +101,25 @@ READY  ->  3  ->  2  ->  1  ->  START
 
 The cars cannot move before START. Release the boost button once during the countdown. Holding it before START does not give an early boost.
 
-## 4. Controls
+## 4. Course Selection
+
+After confirming the title-screen mode, the game displays rotating wireframe previews of the available courses.
+
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Change course | `A` / `D` or cursor left/right | Left/right on either pad |
+| Confirm | `SPACE` | Button 1 |
+| Return to title | `ESC` | - |
+
+| Course | Shape | Character |
+|---|---|---|
+| `RING` | Balanced circular ring | The standard course for learning gates, drift tackles, and basic lines |
+| `OVAL` | Wide high-speed oval | Favors connected acceleration zones and deliberate boost bursts |
+| `PULSE` | Pulsing loop with three apexes | Rewards early line changes and planning for the next gate lane |
+
+Course geometry and racing lines change, but maximum speed, acceleration, boost capacity, gate rewards, and the three-lap victory rule remain common to every course.
+
+## 5. Controls
 
 ### PLAYER 1
 
@@ -119,7 +145,7 @@ The cars cannot move before START. Release the boost button once during the coun
 
 Press `ESC` during a race to return to the title.
 
-## 5. Reading the Race Screen
+## 6. Reading the Race Screen
 
 ```text
  P1 LAP 1 OF 3                     CPU LAP 1 OF 3
@@ -141,7 +167,7 @@ Press `ESC` during a race to return to the title.
 | Bright car | The car is boosting |
 | Short line across the course | An active gate lane |
 
-## 6. Game Rules
+## 7. Game Rules
 
 ### 3 LAPS TO WIN
 
@@ -155,7 +181,7 @@ If both cars reach three laps during the same fixed 20 Hz physics update, the ra
 
 The result screen shows the winner and both lap counts. Its return timer does not begin until the keys or pad controls held at the finish have been released.
 
-## 7. Cars and Track Systems
+## 8. Cars and Track Systems
 
 ### BOOST
 
@@ -177,7 +203,7 @@ A car pushed against a lane limit suffers extra speed loss.
 
 When the gap becomes large enough, the trailing car slowly recovers boost energy. Speed is not increased automatically. The driver must decide when to use the recovered boost.
 
-## 8. CPU LEVEL
+## 9. CPU LEVEL
 
 | LEVEL | Behavior | Recommended For |
 |---:|---|---|
@@ -193,7 +219,21 @@ The CPU avoids boosting when it has a large lead. Every level uses the same car 
 
 # PART 2: RACING GUIDE
 
-## 9. Basic Technique
+## 10. Course Strategy
+
+### RING: Keep the Fundamentals
+
+The distance between the inner and outer lines is easy to read. Start near the center, watch the next gate, and tackle only when the cars meet naturally.
+
+### OVAL: Connect the Acceleration Zones
+
+The wide sections make speed differences easier to build. Do not spend every boost point in a gate fight; save a longer burst for a section where the cars separate.
+
+### PULSE: Read One Apex Ahead
+
+Three apexes make the changing outline more visible. Look beyond the current position and begin moving toward the next apex and gate lane before the last moment.
+
+## 11. Basic Technique
 
 ### Begin Near the Center
 
@@ -207,7 +247,7 @@ Do not look only at your opponent. Identify the lane of the next gate early. A l
 
 The brake is not only for stopping. Use it to fall behind a rival, change gate timing, or make an incoming tackle miss.
 
-## 10. Boost Strategy
+## 12. Boost Strategy
 
 ### Do Not Hold It Forever
 
@@ -221,7 +261,7 @@ A gate approach or drift tackle may reduce your speed. Keeping some energy in re
 
 The trailing car recovers boost when the gap grows. When the gauge begins to refill, use several short bursts instead of always waiting for a full gauge.
 
-## 11. Active Gate Strategy
+## 13. Active Gate Strategy
 
 ### Think One Gate Ahead
 
@@ -235,7 +275,7 @@ Moving into the opponent's gate lane creates a drift-tackle opportunity. Simple 
 
 After a gate is claimed, it remains dark for about three seconds. Use that time to return toward the center and prepare for its next lane.
 
-## 12. Drift Tackle Strategy
+## 14. Drift Tackle Strategy
 
 ### Drift Toward the Opponent
 
@@ -249,7 +289,7 @@ Pushing a rival into the inner or outer limit causes extra speed loss. This can 
 
 If both cars drift into each other, both are knocked away and lose substantial speed. A leading driver may be better off yielding the lane.
 
-## 13. Catching the Leader
+## 15. Catching the Leader
 
 ### Do Not Empty the Gauge
 
@@ -263,7 +303,7 @@ Chasing the CPU across every lane can increase the gap. Skip a distant gate, tak
 
 An inside position makes it easier to push the opponent outward. The moment you catch the leader is often your best chance to take control of the race.
 
-## 14. Racing the CPU
+## 16. Racing the CPU
 
 ### LEVEL 1-2
 
@@ -277,7 +317,7 @@ The CPU uses standard boost bursts. Save your own boost until its burst ends, th
 
 Pure speed is not enough. Skip poor gate approaches, use rail-side tackles, and turn catch-up recovery into carefully timed boosts.
 
-## 15. Two-Player Strategy
+## 17. Two-Player Strategy
 
 ### Avoid Keyboard Ghosting
 
@@ -301,6 +341,8 @@ P2: UP/DOWN     LEFT/RIGHT  N BOOST   M BRAKE
 
 PAD 1 / PAD 2:
 DIRECTION SPEED AND DRIFT   BUTTON 1 BOOST   BUTTON 2 BRAKE
+
+SELECT COURSE: LEFT / RIGHT   SPACE CONFIRM
 
 FIRST TO 3 LAPS WINS
 ```

@@ -13,6 +13,7 @@ SOURCES := $(wildcard *.cpp)
 OBJECTS := $(SOURCES:.cpp=.o)
 DEPS := $(OBJECTS:.o=.d)
 INTRO_DATA := introdat.h
+COURSE_DATA := coursdat.h
 DEMO_DATA := demodat.h
 HERO_DATA := herodat.h
 FONT_DATA := telefont.h
@@ -50,6 +51,7 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) -c $<
 
 gmrace.o: $(INTRO_DATA)
+gmcourse.o: $(COURSE_DATA)
 gmdemo.o: $(DEMO_DATA)
 gmtitle.o: $(HERO_DATA)
 screen.o: $(FONT_DATA)
@@ -59,6 +61,10 @@ $(FONT_DATA): mktele.py
 	mv $@.tmp $@
 
 $(INTRO_DATA): mkintro.py
+	$(PYTHON) $< > $@.tmp
+	mv $@.tmp $@
+
+$(COURSE_DATA): mkcourse.py
 	$(PYTHON) $< > $@.tmp
 	mv $@.tmp $@
 
@@ -93,7 +99,8 @@ clean:
 
 distclean: clean
 	-rm -rf $(BUILD_DIR)
-	-rm -f $(INTRO_DATA) $(INTRO_DATA).tmp $(DEMO_DATA) $(DEMO_DATA).tmp
+	-rm -f $(INTRO_DATA) $(INTRO_DATA).tmp $(COURSE_DATA) $(COURSE_DATA).tmp
+	-rm -f $(DEMO_DATA) $(DEMO_DATA).tmp
 	-rm -f $(HERO_DATA) $(HERO_DATA).tmp titldat.h titldat.h.tmp
 
 -include $(DEPS)

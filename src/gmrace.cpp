@@ -72,6 +72,7 @@ GameModeRace::GameModeRace()
       cpu_target_offset_(0),
       cpu_boost_frames_(0),
       cpu_boost_cooldown_(0),
+      course_id_(0),
       winner_(RACE_WINNER_NONE),
       tackle_cooldown_(0),
       countdown_frame_(0) {
@@ -85,6 +86,7 @@ GameModeRace::GameModeRace()
       gate_drawn_lane_[page][gate] = 0;
     }
     countdown_drawn_stage_[page] = -1;
+    course_drawn_[page] = 0;
   }
   boost_ready_[0] = 0;
   boost_ready_[1] = 0;
@@ -98,6 +100,12 @@ void GameModeRace::set_cpu_level(int level) {
   if (level < 1) level = 1;
   if (level > 5) level = 5;
   cpu_level_ = level;
+}
+
+void GameModeRace::set_course_id(int course_id) {
+  if (course_id < 0) course_id = 0;
+  if (course_id >= INTRO_COURSE_COUNT) course_id = INTRO_COURSE_COUNT - 1;
+  course_id_ = course_id;
 }
 
 int GameModeRace::player_count() const { return player_count_; }
@@ -123,7 +131,7 @@ void GameModeRace::initialize_trig_table() {
 
 void GameModeRace::prepare_intro_frame(int frame) {
   for (int i = 0; i < PLAYER_COUNT; ++i) {
-    cars_[i].prepare_screen(kIntroFrames[frame].cars[i]);
+    cars_[i].prepare_screen(kIntroFrames[course_id_][frame].cars[i]);
   }
 }
 
@@ -398,6 +406,14 @@ void GameModeRace::draw_countdown(int page) {
 }
 
 void GameModeRace::draw_hud(int page) {
+  static const char *course_labels[INTRO_COURSE_COUNT] = {
+    "RING", "OVAL", "PULSE"
+  };
+  if (!course_drawn_[page]) {
+    screen_text_tracking(236, 10, course_labels[course_id_],
+                         1, 1, COLOR_HUD_DIM);
+    course_drawn_[page] = 1;
+  }
   for (int player = 0; player < PLAYER_COUNT; ++player) {
     const int current_lap = cars_[player].lap();
     if (lap_drawn_[page][player] != current_lap) {
@@ -476,6 +492,7 @@ int GameModeRace::initialize() {
       gate_drawn_lane_[page][gate] = 0;
     }
     countdown_drawn_stage_[page] = -1;
+    course_drawn_[page] = 0;
   }
 
   const Vec3f eye = {0.0f, 11.0f, 14.0f};
@@ -483,8 +500,8 @@ int GameModeRace::initialize() {
   const Vec3f up = {0.0f, 1.0f, 0.0f};
   if (!camera_.look_at(eye, target, up)) return 0;
 
-  cars_[0].initialize(0, -42);
-  cars_[1].initialize(0, 42);
+  cars_[0].initialize(0, -42, course_id_);
+  cars_[1].initialize(0, 42, course_id_);
   return 1;
 }
 
@@ -529,12 +546,12 @@ GameModeId GameModeRace::update() {
 void GameModeRace::render(int page) {
   if (intro_drawn_frame_[page] < 0) {
     clear_screen();
-    draw_track(kIntroFrames[intro_frame_].track, COLOR_TRACK);
+    draw_track(kIntroFrames[course_id_][intro_frame_].track, COLOR_TRACK);
     prepare_intro_frame(intro_frame_);
     cars_[0].render(page, cars_[0].boosting() ? COLOR_P1_BOOST : COLOR_P1);
     cars_[1].render(page, cars_[1].boosting() ? COLOR_P2_BOOST : COLOR_P2);
     if (intro_frame_ + 1 >= INTRO_FRAME_COUNT) {
-      draw_gates(page, kIntroFrames[intro_frame_].track);
+      draw_gates(page, kIntroFrames[course_id_][intro_frame_].track);
     }
     draw_hud(page);
     draw_countdown(page);
@@ -543,8 +560,9 @@ void GameModeRace::render(int page) {
   }
 
   if (intro_drawn_frame_[page] != intro_frame_) {
-    const IntroFrame &previous = kIntroFrames[intro_drawn_frame_[page]];
-    const IntroFrame &next = kIntroFrames[intro_frame_];
+    const IntroFrame &previous =
+        kIntroFrames[course_id_][intro_drawn_frame_[page]];
+    const IntroFrame &next = kIntroFrames[course_id_][intro_frame_];
 
     prepare_intro_frame(intro_frame_);
     cars_[0].clear_previous(page);
@@ -570,9 +588,9 @@ void GameModeRace::render(int page) {
     cars_[i].prepare_render(camera_, sin_table_);
   }
   for (int i = 0; i < PLAYER_COUNT; ++i) cars_[i].clear_previous(page);
-  repair_track(kIntroFrames[INTRO_FRAME_COUNT - 1].track,
+  repair_track(kIntroFrames[course_id_][INTRO_FRAME_COUNT - 1].track,
                damage, PLAYER_COUNT);
-  draw_gates(page, kIntroFrames[INTRO_FRAME_COUNT - 1].track);
+  draw_gates(page, kIntroFrames[course_id_][INTRO_FRAME_COUNT - 1].track);
   cars_[0].render(page, cars_[0].boosting() ? COLOR_P1_BOOST : COLOR_P1);
   cars_[1].render(page, cars_[1].boosting() ? COLOR_P2_BOOST : COLOR_P2);
   draw_hud(page);

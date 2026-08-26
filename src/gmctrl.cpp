@@ -55,7 +55,7 @@ void GameModeControls::draw_screen() const {
   screen_line(64, 330, 448, 330, 0x2109);
   vector_centered("FIRST TO 3 LAPS", 348, 4, 1, 1, COLOR_CYAN);
   screen_centered_tracking("SPACE START", 404, 1, 4, COLOR_WHITE);
-  screen_centered_tracking("ESC TITLE", 434, 1, 3, COLOR_WHITE);
+  screen_centered_tracking("ESC COURSE", 434, 1, 3, COLOR_WHITE);
   screen_line(24, 458, 488, 458, COLOR_CYAN);
 }
 
@@ -69,7 +69,7 @@ int GameModeControls::initialize() {
 
 GameModeId GameModeControls::update() {
   input_.update();
-  if (input_.quit()) return GAME_MODE_TITLE;
+  if (input_.quit()) return GAME_MODE_COURSE_SELECT;
   if (!input_released_) {
     if (!input_.confirm()) input_released_ = 1;
     return GAME_MODE_HOW_TO_PLAY;

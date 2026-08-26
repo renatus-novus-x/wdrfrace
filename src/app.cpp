@@ -59,6 +59,7 @@ int set_60hz() {
 GameMode *Application::mode_for(GameModeId id) {
   if (id == GAME_MODE_TITLE) return &title_mode_;
   if (id == GAME_MODE_DEMO) return &demo_mode_;
+  if (id == GAME_MODE_COURSE_SELECT) return &course_mode_;
   if (id == GAME_MODE_HOW_TO_PLAY) return &controls_mode_;
   if (id == GAME_MODE_TEST) return &test_mode_;
   if (id == GAME_MODE_RACE) return &race_mode_;
@@ -138,12 +139,16 @@ int Application::update() {
     if (next == current_mode_id_) continue;
 
     if (current_mode_id_ == GAME_MODE_TITLE &&
-        next == GAME_MODE_HOW_TO_PLAY) {
+        next == GAME_MODE_COURSE_SELECT) {
       const int players = title_mode_.player_count();
       controls_mode_.set_player_count(players);
       controls_mode_.set_cpu_level(title_mode_.cpu_level());
       race_mode_.set_player_count(players);
       race_mode_.set_cpu_level(title_mode_.cpu_level());
+    }
+    if (current_mode_id_ == GAME_MODE_COURSE_SELECT &&
+        next == GAME_MODE_HOW_TO_PLAY) {
+      race_mode_.set_course_id(course_mode_.course_id());
     }
     if (current_mode_id_ == GAME_MODE_RACE &&
         next == GAME_MODE_RESULT) {

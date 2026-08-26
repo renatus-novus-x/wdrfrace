@@ -38,9 +38,10 @@ void draw_line(int x0, int y0, int x1, int y1, iocs_color_t color) {
 
 }  // namespace
 
-void Car::initialize(int angle, int offset) {
+void Car::initialize(int angle, int offset, int course_id) {
   angle_ = angle;
   offset_ = offset;
+  course_id_ = course_id;
   speed_ = 0;
   boost_ = BOOST_LIMIT;
   boosting_ = 0;
@@ -116,8 +117,17 @@ void Car::prepare_render(const Camera &camera, const float *sin_table) {
   const float c = sin_table[(index + TRIG_TABLE_SIZE / 4)
                             & (TRIG_TABLE_SIZE - 1)];
   const float radius = TRACK_RADIUS + offset_ * LANE_SCALE;
-  const float center_x = s * radius;
-  const float center_z = c * radius;
+  float center_x = s * radius;
+  float center_z = c * radius;
+  if (course_id_ == 1) {
+    center_x *= 1.12f;
+    center_z *= 0.82f;
+  } else if (course_id_ == 2) {
+    const float cos3 = 4.0f * c * c * c - 3.0f * c;
+    const float scale = 1.0f + 0.11f * cos3;
+    center_x *= scale;
+    center_z *= scale;
+  }
   const float side_x = s * CAR_HALF_WIDTH;
   const float side_z = c * CAR_HALF_WIDTH;
   const float front_x = c * CAR_HALF_LENGTH;

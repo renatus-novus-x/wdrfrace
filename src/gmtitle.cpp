@@ -90,7 +90,7 @@ GameModeId GameModeTitle::update() {
   level_direction_down_ = level_direction;
   const int confirm = input_.confirm();
   if (confirm && !confirm_down_) {
-    return GAME_MODE_HOW_TO_PLAY;
+    return GAME_MODE_COURSE_SELECT;
   }
   confirm_down_ = confirm;
 

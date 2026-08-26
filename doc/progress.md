@@ -300,6 +300,18 @@
 - Preserved the existing boost gauge, active-gate refill, fixed 20 Hz physics, and incremental two-page rendering.
 - Successfully rebuilt `human.sys` and generated `dist/wdrfrace.xdf` with the WSL Ubuntu 24.04 elf2x68k toolchain.
 
+## 2026-08-26: Course variations and interactive course selection
+
+- Added three selectable course geometries: the balanced circular `RING`, wide `OVAL`, and three-apex `PULSE`.
+- Applied the selected geometry consistently to race physics, track projection, the race-introduction sequence, and HUD course identification.
+- Added `GAME_MODE_COURSE_SELECT` between title and HOW TO PLAY, with keyboard and gamepad left/right selection, confirmation, and return-to-title input.
+- Added an animated TRACK CONFIG screen with rotating wireframe previews and course descriptions.
+- Precomputed all three previews across 40 rotation frames at build time, leaving no runtime three-dimensional projection cost on the selection screen.
+- Retained page-aware black-line erasure so animation works with the two-page double buffer without full-screen clearing.
+- Completed the Technical Monoline vector font with all uppercase `A-Z` and numeric `0-9` glyphs after missing glyphs caused gaps in course names and SELECT COURSE.
+- Raised the precomputed course preview center to `Y=168`, separating every course and rotation frame from the title, course-name, description, and control regions.
+- Updated the Japanese and English user manuals in Markdown, PowerPoint, and PDF form with the new mode flow, controls, course descriptions, and course-specific strategy.
+
 ## 2026-08-25: Fair-start countdown
 
 - Added a READY, 3, 2, 1, GO countdown after the precomputed race-intro camera sequence.

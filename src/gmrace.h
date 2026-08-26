@@ -38,6 +38,7 @@ class GameModeRace : public GameMode {
   int cpu_target_offset_;
   int cpu_boost_frames_;
   int cpu_boost_cooldown_;
+  int course_id_;
   RaceWinner winner_;
   int lap_drawn_[2][PLAYER_COUNT];
   int boost_drawn_[2][PLAYER_COUNT];
@@ -48,6 +49,7 @@ class GameModeRace : public GameMode {
   int countdown_frame_;
   int countdown_drawn_stage_[2];
   int boost_ready_[PLAYER_COUNT];
+  int course_drawn_[2];
 
   void initialize_trig_table();
   void prepare_intro_frame(int frame);
@@ -77,6 +79,7 @@ class GameModeRace : public GameMode {
   GameModeRace();
   void set_player_count(int players);
   void set_cpu_level(int level);
+  void set_course_id(int course_id);
   int player_count() const;
   RaceWinner winner() const;
   int lap(int player) const;
