@@ -59,7 +59,7 @@ Complete three laps before your opponent.
 - In 1 PLAYER, drive the red P1 car against the blue CPU car.
 - In 2 PLAYERS, two drivers compete on one X68000.
 - If both cars finish on the same physics update, the result is a DEAD HEAT.
-- After the result screen, the game returns to the title in about five seconds.
+- After releasing any held input, read the result and press any key or pad button to return to the title.
 
 ## 3. Starting the Game
 
@@ -81,7 +81,7 @@ Complete three laps before your opponent.
 
 CPU LEVEL is used in 1 PLAYER. The default setting is LEVEL 3.
 
-Select `SOUND TEST` to audition every in-game sound effect by its label. Use left/right to choose an effect, press `SPACE` or Button 1 to play it, and press `ESC` to return to the title.
+Select `SOUND TEST` to audition BGM and every in-game sound effect by label. Use up/down to choose the BGM or SE row, left/right to select an item, and `SPACE` or Button 1 to play it. Use `ESC` or Button 2 to return to the title. The public build contains the original SE bank but no purchased BGM, so its BGM row displays `UNAVAILABLE`.
 
 If the title screen is left idle, DEMO REPLAY begins. Press any key or use either gamepad to return to the title.
 
@@ -94,7 +94,7 @@ TITLE  ->  1P / 2P  ->  SELECT COURSE  ->  HOW TO PLAY  ->  RACE
 
 ### HOW TO PLAY Screen
 
-After checking the controls, press `SPACE` or gamepad Button 1 to begin. Press `ESC` to return to course selection.
+After checking the controls, press `SPACE` or gamepad Button 1 to begin. Press `ESC` or Button 2 to return to course selection.
 
 ### Start Sequence
 
@@ -106,7 +106,7 @@ READY  ->  3  ->  2  ->  1  ->  START
 
 The cars cannot move before START. Release the boost button once during the countdown. Holding it before START does not give an early boost.
 
-Electronic cues mark `3`, `2`, and `1` at 0.75-second intervals, followed by a rising START cue. A warning sounds when either car enters the final lap, and distinct fanfares identify a P1 win, a P2 or CPU win, and a draw.
+Electronic cues mark `3`, `2`, and `1` at 0.75-second intervals, followed by a rising START cue. In a build with licensed BGM data, entering the final lap changes to the FINAL LAP track and the result screen changes to the RESULT track. There is no separate FINAL LAP or finish fanfare SE.
 
 ## 4. Course Selection
 
@@ -116,7 +116,7 @@ After confirming the title-screen mode, the game displays rotating wireframe pre
 |---|---|---|
 | Change course | `A` / `D` or cursor left/right | Left/right on either pad |
 | Confirm | `SPACE` | Button 1 |
-| Return to title | `ESC` | - |
+| Return to title | `ESC` | Button 2 |
 
 | Course | Shape | Character |
 |---|---|---|
@@ -150,7 +150,7 @@ Course geometry and racing lines change, but maximum speed, acceleration, boost 
 | Boost | `N` | Button 1 |
 | Brake | `M` | Button 2 |
 
-Press `ESC` during a race to return to the title.
+Press `ESC` or either gamepad's Button 2 during a race to return to the title.
 
 ## 6. Reading the Race Screen
 
@@ -186,7 +186,11 @@ If both cars reach three laps during the same fixed 20 Hz physics update, the ra
 
 ### RESULT
 
-The result screen shows the winner and both lap counts. Its return timer does not begin until the keys or pad controls held at the finish have been released.
+The result screen shows the winner and both lap counts. Input held at the finish must first be released. After a minimum one-second display, `PRESS ANY KEY` accepts any keyboard or gamepad input and returns to the title. The screen no longer closes automatically.
+
+### BGM AND SE
+
+STREAM BGM, when supplied in a licensed private build, changes with TITLE/DEMO, COURSE/HOW TO PLAY, GAME, FINAL LAP, and RESULT. The public build intentionally omits purchased BGM. All builds include the original STREAM SE bank for menu, countdown, start, boost, drift, tackle, wall, gate, and slipstream cues.
 
 ## 8. Cars and Track Systems
 
@@ -371,7 +375,10 @@ DIRECTION SPEED AND DRIFT   BUTTON 1 BOOST   BUTTON 2 BRAKE
 
 SELECT COURSE: LEFT / RIGHT   SPACE CONFIRM
 TITLE MENU: UP / DOWN   SPACE SELECT
-SOUND TEST: LEFT / RIGHT   SPACE PLAY   ESC TITLE
+SOUND TEST: UP/DOWN BGM-SE   LEFT/RIGHT SELECT
+            SPACE/BUTTON 1 PLAY   ESC/BUTTON 2 TITLE
+
+RESULT: RELEASE HELD INPUT   ANY KEY OR PAD BUTTON TO TITLE
 
 FIRST TO 3 LAPS WINS
 ```
