@@ -25,6 +25,7 @@ Thumbs.db
 /src/*.h.tmp
 /src/bgmpriv.h
 /src/bgmstrm*.h
+/dist/wdrpriv.xdf
 
 # Python bytecode caches
 __pycache__/

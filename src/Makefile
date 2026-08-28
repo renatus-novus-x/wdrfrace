@@ -11,9 +11,13 @@ LDFLAGS = -Ttext=0x6800 -s -specs=x68knodos.specs
 
 BGM_QUALITY ?= NDP_QUALITY_FAST
 BGM_PROFILE ?= NDP_PROFILE_STREAM
+PRIVATE_BGM ?= 0
 CFLAGS += -DNDP_QUALITY=$(BGM_QUALITY)
 CFLAGS += -DNDP_PROFILE=$(BGM_PROFILE)
-ifneq ($(wildcard bgmpriv.h),)
+ifeq ($(PRIVATE_BGM),1)
+ifeq ($(wildcard bgmpriv.h),)
+$(error PRIVATE_BGM=1 requires src/bgmpriv.h)
+endif
 CFLAGS += -DWDR_PRIVATE_BGM
 endif
 
