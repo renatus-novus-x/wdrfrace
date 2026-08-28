@@ -69,13 +69,14 @@ int is_cancel_transition(GameModeId current, GameModeId next) {
          (current == GAME_MODE_SE_TEST && next == GAME_MODE_TITLE);
 }
 
-void play_game_sound(SoundEffect &sound, GameSoundId game_sound) {
+void play_game_sound(SoundEffect &sound, BgmPlayer &bgm,
+                     GameSoundId game_sound) {
   if (game_sound == GAME_SOUND_COUNTDOWN) sound.play_countdown();
   else if (game_sound == GAME_SOUND_START) sound.play_start();
-  else if (game_sound == GAME_SOUND_FINAL_LAP) sound.play_final_lap();
-  else if (game_sound == GAME_SOUND_GOAL_P1) sound.play_goal(1);
-  else if (game_sound == GAME_SOUND_GOAL_P2) sound.play_goal(2);
-  else if (game_sound == GAME_SOUND_GOAL_DRAW) sound.play_goal(0);
+  else if (game_sound == GAME_SOUND_FINAL_LAP) {
+    bgm.play_final_lap();
+    sound.play_final_lap();
+  }
 }
 
 }  // namespace
@@ -118,6 +119,10 @@ int Application::initialize() {
   _iocs_vpage(1 << front_page_);
   _iocs_b_curoff();
   sound_.initialize();
+  if (!bgm_.initialize()) {
+    finalize();
+    return 0;
+  }
   if (set_60hz() != 0) {
     finalize();
     return 0;
@@ -128,6 +133,7 @@ int Application::initialize() {
     finalize();
     return 0;
   }
+  bgm_.play_for_mode(current_mode_id_);
   previous_time_ = _iocs_ontime();
   running_ = 1;
   return 1;
@@ -160,7 +166,7 @@ int Application::update() {
   const int preparing = mode_initializing_;
   if (!preparing && !paused_) {
     current_mode_->advance_time(mode_elapsed_cs);
-    play_game_sound(sound_, current_mode_->consume_game_sound());
+    play_game_sound(sound_, bgm_, current_mode_->consume_game_sound());
   }
   while (frame_accumulator_cs_ >= FIXED_FRAME_STEP_CS) {
     frame_accumulator_cs_ -= FIXED_FRAME_STEP_CS;
@@ -173,9 +179,10 @@ int Application::update() {
     if (current_mode_->consume_select_sound()) sound_.play_select();
     const char *sound_label = current_mode_->consume_sound_label();
     if (sound_label) sound_.play(sound_label);
-    play_game_sound(sound_, current_mode_->consume_game_sound());
+    play_game_sound(sound_, bgm_, current_mode_->consume_game_sound());
     if (next == current_mode_id_) continue;
 
+    sound_.stop();
     if (is_confirm_transition(current_mode_id_, next)) {
       sound_.play_confirm();
     } else if (is_cancel_transition(current_mode_id_, next)) {
@@ -204,6 +211,8 @@ int Application::update() {
     current_mode_->finalize();
     current_mode_ = 0;
     current_mode_id_ = next;
+    if (next == GAME_MODE_RACE) bgm_.stop();
+    else bgm_.play_for_mode(next);
     frame_accumulator_cs_ = 0;
     if (next == GAME_MODE_EXIT) {
       running_ = 0;
@@ -220,7 +229,11 @@ int Application::update() {
       running_ = 0;
       return 0;
     }
-    if (status > 0) mode_initializing_ = 0;
+    if (status > 0) {
+      mode_initializing_ = 0;
+      if (current_mode_id_ == GAME_MODE_RACE)
+        bgm_.play_for_mode(current_mode_id_);
+    }
     render_due_ = 0;
   }
 
@@ -238,6 +251,7 @@ void Application::render() {
 }
 
 void Application::finalize() {
+  bgm_.finalize();
   sound_.finalize();
   if (current_mode_) {
     current_mode_->finalize();

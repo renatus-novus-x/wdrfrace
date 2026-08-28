@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <x68k/iocs.h>
 
+#include "bgm.h"
 #include "gmode.h"
 #include "gmcourse.h"
 #include "gmctrl.h"
@@ -37,6 +38,7 @@ class Application {
   GameModeRace race_mode_;
   GameModeResult result_mode_;
   GameModeSoundTest sound_test_mode_;
+  BgmPlayer bgm_;
   SoundEffect sound_;
 
   GameMode *mode_for(GameModeId id);

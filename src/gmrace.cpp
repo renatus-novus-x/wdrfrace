@@ -721,13 +721,10 @@ GameModeId GameModeRace::update() {
   if (p1_finished || p2_finished) {
     if (p1_finished && p2_finished) {
       winner_ = RACE_WINNER_DRAW;
-      pending_sound_ = GAME_SOUND_GOAL_DRAW;
     } else if (p1_finished) {
       winner_ = RACE_WINNER_PLAYER_1;
-      pending_sound_ = GAME_SOUND_GOAL_P1;
     } else {
       winner_ = RACE_WINNER_PLAYER_2;
-      pending_sound_ = GAME_SOUND_GOAL_P2;
     }
     return GAME_MODE_RESULT;
   }

@@ -11,7 +11,6 @@ const iocs_color_t COLOR_CYAN = 0xf83f;
 const iocs_color_t COLOR_P1 = 0x67d9;
 const iocs_color_t COLOR_P2 = 0x62bf;
 const int RESULT_MIN_FRAMES = 20;
-const int RESULT_FRAMES = 100;
 
 }  // namespace
 
@@ -57,7 +56,6 @@ GameModeId GameModeResult::update() {
   if (elapsed_frames_ >= RESULT_MIN_FRAMES && input_.any_key()) {
     return GAME_MODE_TITLE;
   }
-  if (elapsed_frames_ >= RESULT_FRAMES) return GAME_MODE_TITLE;
   return GAME_MODE_RESULT;
 }
 
@@ -109,6 +107,6 @@ void GameModeResult::draw_screen() const {
     screen_centered_tracking(p2, 306, 1, 4, COLOR_P2);
   }
   screen_line(96, 354, 416, 354, COLOR_CYAN);
-  screen_centered_tracking("RETURNING TO TITLE", 420, 1, 3,
+  screen_centered_tracking("PRESS ANY KEY", 420, 1, 3,
                            COLOR_WHITE);
 }

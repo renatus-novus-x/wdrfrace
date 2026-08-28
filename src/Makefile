@@ -9,6 +9,14 @@ LD = $(CROSS)g++
 CFLAGS = -m68000 -O2 -g -MMD -MP -specs=x68knodos.specs
 LDFLAGS = -Ttext=0x6800 -s -specs=x68knodos.specs
 
+BGM_QUALITY ?= NDP_QUALITY_FAST
+BGM_PROFILE ?= NDP_PROFILE_STREAM
+CFLAGS += -DNDP_QUALITY=$(BGM_QUALITY)
+CFLAGS += -DNDP_PROFILE=$(BGM_PROFILE)
+ifneq ($(wildcard bgmpriv.h),)
+CFLAGS += -DWDR_PRIVATE_BGM
+endif
+
 SOURCES := $(wildcard *.cpp)
 OBJECTS := $(SOURCES:.cpp=.o)
 DEPS := $(OBJECTS:.o=.d)
@@ -55,6 +63,7 @@ gmcourse.o: $(COURSE_DATA)
 gmdemo.o: $(DEMO_DATA)
 gmtitle.o: $(HERO_DATA)
 screen.o: $(FONT_DATA)
+bgm.o: bgmdata.h ndp.h $(wildcard bgmpriv.h) $(wildcard bgmstrm*.h)
 
 $(FONT_DATA): mktele.py
 	$(PYTHON) $< > $@.tmp

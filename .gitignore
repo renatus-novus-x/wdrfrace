@@ -23,6 +23,8 @@ Thumbs.db
 
 # Generated header temporary files
 /src/*.h.tmp
+/src/bgmpriv.h
+/src/bgmstrm*.h
 
 # Python bytecode caches
 __pycache__/

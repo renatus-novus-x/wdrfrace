@@ -468,3 +468,51 @@
 - Added controller cancellation: button 2 cancels menu screens, while buttons 1 and 2 together return from a race without conflicting with the brake control.
 - Expanded HOW TO PLAY to explicitly show Q/N as BOOST, E/M as BRAKE, and the equivalent pad-button assignments.
 - Successfully rebuilt with the Ubuntu 24.04 elf2x68k environment and regenerated `dist/wdrfrace.xdf`.
+## 2026-08-28: NDP BGM integration
+
+- Integrated the current header-only NDP player and advanced it once per 60 Hz VBlank, independently of the 20 Hz game update.
+- Added game-mode BGM routing: NDP Demo 12-1 for TITLE/DEMO, 13-2 for COURSE SELECT/HOW TO PLAY, 11-4 for GAME, 10-1 for FINAL LAP, and 12-2 for RESULT.
+- Preserved music across adjacent modes that share a track, and restart completed tracks for continuous playback.
+- Moved the existing sound-effect voice from YM2151 channel 7 to channel 4 to avoid NDP channels 0-2 and noise channel 7.
+- Defaulted the game build to NDP FAST quality; `make BGM_QUALITY=NDP_QUALITY_BALANCED` can select the balanced profile.
+- Generated purchased song data as local `src/bgmpriv.h`; the file is ignored by Git and must not be distributed separately from licensed game builds.
+
+## 2026-08-28: Low-CPU NDP STREAM BGM
+
+- Switched the Wire Drift Racers BGM backend to `NDP_PROFILE_STREAM` while preserving the existing `ndp_start()` and `ndp_update()` API.
+- Converted the five purchased DemoSongs from FAST-profile YM2151 traces into private 60 Hz NDSR event streams.
+- Detected exact repeating output periods and retained each introduction with its own loop start instead of storing arbitrary five-minute captures.
+- Reduced the five compiled stream payloads to approximately 217 KiB total, with roughly 3.6-5.7 YM2151 writes per frame.
+- Added private `bgmstrm*.h` files to `.gitignore`; public source builds remain possible without purchased music data.
+
+## 2026-08-28: V-DISP interrupt-driven BGM
+
+- Moved 60 Hz NDP STREAM updates from the application loop to an IOCS `_VDISPST` vertical-blank interrupt handler.
+- Kept physics, rendering, page flipping, and sound-effect sequencing in the existing main loop.
+- Added a short BGM interrupt lock around track changes and sound-effect YM2151 writes to prevent address/data register transactions from interleaving.
+- Unregisters the V-DISP handler before finalizing NDP.
+
+## 2026-08-28: Result wait and BGM sound test
+
+- Removed the RESULT screen automatic timeout; it now waits for a released-and-new key or pad input while displaying `PRESS ANY KEY`.
+- Added all five mode BGM tracks to SOUND TEST after the existing sound-effect entries.
+- SOUND TEST identifies each entry as SE or BGM and allows sound effects to be auditioned over the selected BGM.
+- Kept mode-driven BGM restoration, so leaving SOUND TEST returns to the title music automatically.
+
+- Refined SOUND TEST into two persistent lanes: BGM on top and SE below. UP/DOWN changes lanes, LEFT/RIGHT selects within a lane, and SPACE plays the highlighted entry.
+
+## 2026-08-28: Result BGM-only finish
+
+- Removed the GOAL P1, GOAL P2, and GOAL DRAW result sound effects because the RESULT BGM now carries the finish presentation.
+- Removed the corresponding game-sound event IDs, race event emission, sequences, playback API, label dispatch, and SOUND TEST entries.
+
+## 2026-08-28: Clean audio mode transitions
+
+- Added an explicit sound-effect stop/key-off before every game-mode transition, then starts the new transition confirm/cancel sound.
+- Preserved the shared course-selection/how-to-play BGM without restarting it.
+- Stops BGM before entering RACE and starts the GAME track only after incremental RACE initialization completes.
+
+## 2026-08-28: SOUND TEST BGM restart
+- SOUND TEST now stops the currently playing BGM before starting the selected track, so repeated confirmation restarts the song from its beginning.
+- Normal same-track mode transitions remain uninterrupted.
+

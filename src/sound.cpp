@@ -1,11 +1,22 @@
 #include "sound.h"
+#include "bgm.h"
 
 #include <string.h>
 #include <x68k/iocs.h>
 
 namespace {
 
-const int OPM_CHANNEL = 7;
+void sound_opm_write(int reg, int value)
+{
+  bgm_interrupt_lock();
+  _iocs_opmset(reg, value);
+  bgm_interrupt_unlock();
+}
+
+#define _iocs_opmset sound_opm_write
+
+// NDP uses channels 0-2 and channel 7 for YM2151 noise emulation.
+const int OPM_CHANNEL = 4;
 const int kConfirmSequence[] = {0x5a, 1, 0x6e, 4};
 const int kCancelSequence[] = {0x38, 1, 0x2a, 2};
 const int kSelectSequence[] = {0x6e, 2};
@@ -27,15 +38,6 @@ const int kWallSequence[] = {
 };
 const int kGateSequence[] = {0x4a, 1, 0x5a, 1, 0x6e, 2};
 const int kSlipstreamSequence[] = {0x3e, 1, 0x46, 1, 0x52, 2};
-const int kGoalP1Sequence[] = {
-  0x4a, 2, 0x4e, 2, 0x5a, 2, 0x6e, 4
-};
-const int kGoalP2Sequence[] = {
-  0x3a, 2, 0x3e, 2, 0x4a, 4
-};
-const int kGoalDrawSequence[] = {
-  0x4a, 2, 0x4e, 2, 0x4a, 2, 0x4e, 4
-};
 
 #define SEQUENCE_LENGTH(sequence) \
   ((int)(sizeof(sequence) / sizeof((sequence)[0]) / 2))
@@ -43,7 +45,7 @@ const int kGoalDrawSequence[] = {
 const char *kSoundLabels[] = {
   "CONFIRM", "CANCEL", "SELECT", "COUNTDOWN", "START",
   "FINAL LAP", "BOOST", "DRIFT", "TACKLE", "WALL", "GATE",
-  "SLIPSTREAM", "GOAL P1", "GOAL P2", "GOAL DRAW"
+  "SLIPSTREAM"
 };
 
 void write_operator(int slot, int multiple, int total_level, int decay) {
@@ -144,6 +146,15 @@ void SoundEffect::start(Effect effect, const int *sequence, int length) {
   play_note(sequence_[0]);
 }
 
+void SoundEffect::stop() {
+  if (initialized_) key_off();
+  effect_ = EFFECT_NONE;
+  sequence_ = 0;
+  sequence_length_ = 0;
+  sequence_index_ = 0;
+  note_ticks_ = 0;
+}
+
 void SoundEffect::play_confirm() {
   start(EFFECT_CONFIRM, kConfirmSequence,
         SEQUENCE_LENGTH(kConfirmSequence));
@@ -199,19 +210,6 @@ void SoundEffect::play_slipstream() {
         SEQUENCE_LENGTH(kSlipstreamSequence));
 }
 
-void SoundEffect::play_goal(int result) {
-  if (result == 1) {
-    start(EFFECT_GOAL_P1, kGoalP1Sequence,
-          SEQUENCE_LENGTH(kGoalP1Sequence));
-  } else if (result == 2) {
-    start(EFFECT_GOAL_P2, kGoalP2Sequence,
-          SEQUENCE_LENGTH(kGoalP2Sequence));
-  } else {
-    start(EFFECT_GOAL_DRAW, kGoalDrawSequence,
-          SEQUENCE_LENGTH(kGoalDrawSequence));
-  }
-}
-
 int SoundEffect::play(const char *label) {
   if (!label) return 0;
   if (strcmp(label, "CONFIRM") == 0) play_confirm();
@@ -226,9 +224,6 @@ int SoundEffect::play(const char *label) {
   else if (strcmp(label, "WALL") == 0) play_wall();
   else if (strcmp(label, "GATE") == 0) play_gate();
   else if (strcmp(label, "SLIPSTREAM") == 0) play_slipstream();
-  else if (strcmp(label, "GOAL P1") == 0) play_goal(1);
-  else if (strcmp(label, "GOAL P2") == 0) play_goal(2);
-  else if (strcmp(label, "GOAL DRAW") == 0) play_goal(0);
   else return 0;
   return 1;
 }

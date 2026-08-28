@@ -7,14 +7,19 @@
 class GameModeSoundTest : public GameMode {
  private:
   Input input_;
-  int selected_;
+  int lane_;
+  int selected_bgm_;
+  int selected_se_;
   int direction_down_;
+  int vertical_down_;
   int confirm_down_;
   const char *pending_label_;
-  int drawn_selected_[2];
+  int drawn_lane_[2];
+  int drawn_bgm_[2];
+  int drawn_se_[2];
 
   void draw_scene() const;
-  void draw_selection(int selected, int color) const;
+  void draw_selection(int lane, int selected, int color) const;
 
  public:
   GameModeSoundTest();

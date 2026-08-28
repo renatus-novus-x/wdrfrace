@@ -17,9 +17,6 @@ class SoundEffect {
     EFFECT_WALL,
     EFFECT_GATE,
     EFFECT_SLIPSTREAM,
-    EFFECT_GOAL_P1,
-    EFFECT_GOAL_P2,
-    EFFECT_GOAL_DRAW,
   };
 
   int initialized_;
@@ -37,6 +34,7 @@ class SoundEffect {
   SoundEffect();
   void initialize();
   void update();
+  void stop();
   void play_confirm();
   void play_cancel();
   void play_select();
@@ -49,7 +47,6 @@ class SoundEffect {
   void play_wall();
   void play_gate();
   void play_slipstream();
-  void play_goal(int result);
   int play(const char *label);
   static int label_count();
   static const char *label_at(int index);
