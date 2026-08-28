@@ -70,7 +70,6 @@ SoundEffect::SoundEffect()
 
 void SoundEffect::initialize() {
   key_off();
-  _iocs_opmset(0x0f, 0x9f);
   _iocs_opmset(0x20 + OPM_CHANNEL, 0xc7);
   _iocs_opmset(0x38 + OPM_CHANNEL, 0x00);
   write_operator(0, 1, 0x14, 0x18);
@@ -255,7 +254,6 @@ void SoundEffect::update() {
 void SoundEffect::finalize() {
   if (initialized_) {
     key_off();
-    _iocs_opmset(0x0f, 0x00);
   }
   initialized_ = 0;
   effect_ = EFFECT_NONE;

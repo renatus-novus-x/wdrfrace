@@ -22,11 +22,12 @@ static const WdrBgmSong wdr_bgm_songs[] = {
 };
 
 #define WDR_BGM_AVAILABLE 1
+#define WDR_BGM_SONG_COUNT \
+  ((int)(sizeof(wdr_bgm_songs) / sizeof(wdr_bgm_songs[0])))
 #else
 static const WdrBgmSong wdr_bgm_songs[] = {{0, 0}};
 #define WDR_BGM_AVAILABLE 0
+#define WDR_BGM_SONG_COUNT 0
 #endif
-
-#define WDR_BGM_SONG_COUNT 5
 
 #endif

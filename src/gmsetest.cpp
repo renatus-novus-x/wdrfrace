@@ -11,9 +11,9 @@ const int COLOR_BLACK = 0x0000;
 const int COLOR_WHITE = 0xffff;
 const int COLOR_CYAN = 0xf83f;
 const int COLOR_DIM = 0x2109;
-const int BGM_COUNT = 5;
+const int BGM_LABEL_COUNT = 5;
 
-const char *const kBgmLabels[BGM_COUNT] = {
+const char *const kBgmLabels[BGM_LABEL_COUNT] = {
   "TITLE DEMO",
   "COURSE HOW TO",
   "GAME",
@@ -70,17 +70,21 @@ GameModeId GameModeSoundTest::update() {
 
   const int direction = input_.menu_left() || input_.menu_right();
   if (direction && !direction_down_) {
-    const int count = lane_ == 0 ? BGM_COUNT : SoundEffect::label_count();
+    const int count = lane_ == 0 ? bgm_track_count() :
+                                   SoundEffect::label_count();
     int &selected = lane_ == 0 ? selected_bgm_ : selected_se_;
-    if (input_.menu_left()) selected = (selected + count - 1) % count;
-    else selected = (selected + 1) % count;
+    if (count > 0) {
+      if (input_.menu_left()) selected = (selected + count - 1) % count;
+      else selected = (selected + 1) % count;
+    }
   }
   direction_down_ = direction;
 
   const int confirm = input_.confirm();
   if (confirm && !confirm_down_) {
     if (lane_ == 0) {
-      bgm_sound_test_play(bgm_track(selected_bgm_));
+      if (bgm_track_count() > 0)
+        bgm_sound_test_play(bgm_track(selected_bgm_));
     } else {
       pending_label_ = SoundEffect::label_at(selected_se_);
     }
@@ -112,8 +116,10 @@ void GameModeSoundTest::draw_scene() const {
 
 void GameModeSoundTest::draw_selection(int lane, int selected, int color) const {
   const int bgm = lane == 0;
-  const char *label = bgm ? kBgmLabels[selected] :
-                            SoundEffect::label_at(selected);
+  const int available_bgm = bgm_track_count();
+  const char *label = bgm ? (available_bgm > 0 ?
+                             kBgmLabels[selected] : "UNAVAILABLE") :
+                             SoundEffect::label_at(selected);
   if (!label) return;
   const int heading_y = bgm ? 128 : 240;
   const int label_y = bgm ? 158 : 270;
@@ -123,7 +129,7 @@ void GameModeSoundTest::draw_selection(int lane, int selected, int color) const 
   char count[] = "01 OF 09";
   count[0] = (char)('0' + (selected + 1) / 10);
   count[1] = (char)('0' + (selected + 1) % 10);
-  const int total = bgm ? BGM_COUNT : SoundEffect::label_count();
+  const int total = bgm ? available_bgm : SoundEffect::label_count();
   count[6] = (char)('0' + total / 10);
   count[7] = (char)('0' + total % 10);
   screen_centered_tracking(count, count_y, 1, 3, color);

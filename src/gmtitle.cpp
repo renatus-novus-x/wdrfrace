@@ -68,6 +68,9 @@ int GameModeTitle::initialize() {
     cut_markers_visible_[page] = 0;
   }
   input_.update();
+  direction_down_ = input_.menu_up() || input_.menu_down();
+  level_direction_down_ = input_.menu_left() || input_.menu_right();
+  confirm_down_ = input_.confirm();
   return 1;
 }
 

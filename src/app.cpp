@@ -55,7 +55,8 @@ int set_60hz() {
 }
 
 int is_confirm_transition(GameModeId current, GameModeId next) {
-  return (current == GAME_MODE_TITLE && next == GAME_MODE_COURSE_SELECT) ||
+  return (current == GAME_MODE_TITLE &&
+          (next == GAME_MODE_COURSE_SELECT || next == GAME_MODE_SE_TEST)) ||
          (current == GAME_MODE_COURSE_SELECT &&
           next == GAME_MODE_HOW_TO_PLAY) ||
          (current == GAME_MODE_HOW_TO_PLAY && next == GAME_MODE_RACE);
@@ -182,12 +183,13 @@ int Application::update() {
     play_game_sound(sound_, bgm_, current_mode_->consume_game_sound());
     if (next == current_mode_id_) continue;
 
+    const int confirm_transition =
+        is_confirm_transition(current_mode_id_, next);
+    const int cancel_transition =
+        is_cancel_transition(current_mode_id_, next);
+    const int restart_title_bgm =
+        current_mode_id_ == GAME_MODE_SE_TEST && next == GAME_MODE_TITLE;
     sound_.stop();
-    if (is_confirm_transition(current_mode_id_, next)) {
-      sound_.play_confirm();
-    } else if (is_cancel_transition(current_mode_id_, next)) {
-      sound_.play_cancel();
-    }
 
     if (current_mode_id_ == GAME_MODE_TITLE &&
         next == GAME_MODE_COURSE_SELECT) {
@@ -212,7 +214,10 @@ int Application::update() {
     current_mode_ = 0;
     current_mode_id_ = next;
     if (next == GAME_MODE_RACE) bgm_.stop();
+    else if (restart_title_bgm) bgm_.restart(BGM_TRACK_TITLE_DEMO);
     else bgm_.play_for_mode(next);
+    if (confirm_transition) sound_.play_confirm();
+    else if (cancel_transition) sound_.play_cancel();
     frame_accumulator_cs_ = 0;
     if (next == GAME_MODE_EXIT) {
       running_ = 0;

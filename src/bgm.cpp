@@ -11,6 +11,7 @@ namespace {
 
 const unsigned int BGM_MASTER_ATTENUATION = 2;
 volatile int bgm_interrupt_enabled = 0;
+volatile unsigned int bgm_interrupt_lock_depth = 0;
 int bgm_interrupt_installed = 0;
 BgmPlayer *active_bgm_player = 0;
 
@@ -26,24 +27,34 @@ int song_index(BgmTrack track) {
 
 }  // namespace
 
-void bgm_interrupt_lock() { bgm_interrupt_enabled = 0; }
+void bgm_interrupt_lock()
+{
+  if (bgm_interrupt_lock_depth++ == 0) bgm_interrupt_enabled = 0;
+}
 
 void bgm_interrupt_unlock()
 {
-  if (bgm_interrupt_installed) bgm_interrupt_enabled = 1;
+  if (bgm_interrupt_lock_depth == 0) return;
+  if (--bgm_interrupt_lock_depth == 0 && bgm_interrupt_installed)
+    bgm_interrupt_enabled = 1;
 }
 
 void bgm_sound_test_play(BgmTrack track)
 {
   if (!active_bgm_player) return;
-  active_bgm_player->stop();
-  active_bgm_player->play(track);
+  active_bgm_player->restart(track);
+}
+
+int bgm_track_count()
+{
+  return WDR_BGM_AVAILABLE ? WDR_BGM_SONG_COUNT : 0;
 }
 
 BgmPlayer::BgmPlayer()
     : initialized_(0), current_track_(BGM_TRACK_NONE) {}
 
 int BgmPlayer::initialize() {
+  bgm_interrupt_lock_depth = 0;
   if (!ndp_initialize()) return 0;
   ndp_set_master_volume(BGM_MASTER_ATTENUATION);
   current_track_ = BGM_TRACK_NONE;
@@ -58,6 +69,15 @@ int BgmPlayer::initialize() {
   bgm_interrupt_installed = 1;
   active_bgm_player = this;
   return 1;
+}
+
+void BgmPlayer::restart(BgmTrack track) {
+  if (!initialized_) return;
+  bgm_interrupt_lock();
+  ndp_stop();
+  current_track_ = track;
+  if (track != BGM_TRACK_NONE) start_current();
+  bgm_interrupt_unlock();
 }
 
 int BgmPlayer::start_current() {

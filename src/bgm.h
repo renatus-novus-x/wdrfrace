@@ -15,6 +15,7 @@ enum BgmTrack {
 void bgm_interrupt_lock();
 void bgm_interrupt_unlock();
 void bgm_sound_test_play(BgmTrack track);
+int bgm_track_count();
 
 class BgmPlayer {
  private:
@@ -28,6 +29,7 @@ class BgmPlayer {
   int initialize();
   void update();
   void play(BgmTrack track);
+  void restart(BgmTrack track);
   void play_for_mode(GameModeId mode);
   void play_final_lap();
   void stop();
