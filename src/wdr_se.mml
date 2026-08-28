@@ -1,0 +1,47 @@
+; Wire Drift Racers original sound effects.
+; t300 maps a sixteenth note to three 60 Hz frames.
+@gain 8
+
+@effect CONFIRM 1 0x0c 0x10 1 0x24 0x18
+t300 v15 o5 l16 g+16 o6 b4
+@end
+
+@effect CANCEL 2 0x00 0x14 1 0x04 0x18
+t300 v15 o4 a8 e8
+@end
+
+@effect SELECT 4 0x00 0x12 1 0x00 0x16
+t300 v15 o6 e16 a16 o7 c+16
+@end
+
+@effect COUNTDOWN 2 0x00 0x12 1 0x00 0x12
+t300 v15 o6 a4
+@end
+
+@effect START 3 0x18 0x10 1 0x10 0x10
+t300 v15 o4 b16 o5 g+16 o6 f8 o7 d4
+@end
+
+@effect BOOST 3 0x08 0x10 1 0x20 0x18
+t300 v15 o4 f16 o5 d16 b16 o6 g+16
+@end
+
+@effect DRIFT 5 0x10 0x1c 2 0x18 0x16
+t300 v15 o4 d16 b16 o5 g+16 o6 f16 o7 d8
+@end
+
+@effect TACKLE 1 0x00 0x18 1 0x00 0x1f
+t300 v15 o3 c8 g8
+@end
+
+@effect WALL 7 0x04 0x1f 6 0x0c 0x1f
+t300 v15 o4 d16 o3 d16 o4 g+16 o3 f16 o5 d16
+@end
+
+@effect GATE 2 0x0c 0x14 1 0x26 0x18
+t300 v15 o4 g+16 o5 g+16 o6 b8
+@end
+
+@effect SLIPSTREAM 4 0x18 0x0c 1 0x30 0x14
+t300 v15 o3 b16 o4 f16 o5 d8
+@end

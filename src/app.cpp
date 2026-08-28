@@ -76,7 +76,6 @@ void play_game_sound(SoundEffect &sound, BgmPlayer &bgm,
   else if (game_sound == GAME_SOUND_START) sound.play_start();
   else if (game_sound == GAME_SOUND_FINAL_LAP) {
     bgm.play_final_lap();
-    sound.play_final_lap();
   }
 }
 
@@ -119,11 +118,11 @@ int Application::initialize() {
   _iocs_apage(front_page_);
   _iocs_vpage(1 << front_page_);
   _iocs_b_curoff();
-  sound_.initialize();
   if (!bgm_.initialize()) {
     finalize();
     return 0;
   }
+  sound_.initialize();
   if (set_60hz() != 0) {
     finalize();
     return 0;
@@ -256,8 +255,8 @@ void Application::render() {
 }
 
 void Application::finalize() {
-  bgm_.finalize();
   sound_.finalize();
+  bgm_.finalize();
   if (current_mode_) {
     current_mode_->finalize();
     current_mode_ = 0;

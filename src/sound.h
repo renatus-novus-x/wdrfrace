@@ -4,31 +4,22 @@
 class SoundEffect {
  private:
   enum Effect {
-    EFFECT_NONE,
     EFFECT_CONFIRM,
     EFFECT_CANCEL,
     EFFECT_SELECT,
     EFFECT_COUNTDOWN,
     EFFECT_START,
-    EFFECT_FINAL_LAP,
     EFFECT_BOOST,
     EFFECT_DRIFT,
     EFFECT_TACKLE,
     EFFECT_WALL,
     EFFECT_GATE,
     EFFECT_SLIPSTREAM,
+    EFFECT_COUNT,
   };
 
   int initialized_;
-  Effect effect_;
-  const int *sequence_;
-  int sequence_length_;
-  int sequence_index_;
-  int note_ticks_;
-
-  void key_off();
-  void play_note(int key_code);
-  void start(Effect effect, const int *sequence, int length);
+  void start(Effect effect);
 
  public:
   SoundEffect();
@@ -40,7 +31,6 @@ class SoundEffect {
   void play_select();
   void play_countdown();
   void play_start();
-  void play_final_lap();
   void play_boost();
   void play_drift();
   void play_tackle();

@@ -42,6 +42,12 @@ typedef struct NdpSeBank {
     unsigned int count;
 } NdpSeBank;
 
+typedef struct NdpStreamSeBank {
+    const uint8_t *data;
+    size_t size;
+    unsigned int count;
+} NdpStreamSeBank;
+
 /*
  * Playback quality presets.  Define NDP_QUALITY before including ndp.h.
  * Every feature can also be overridden independently for game builds.
@@ -178,6 +184,11 @@ int ndp_se_open(NdpSeBank *bank, const void *data, size_t size);
 int ndp_se_play(const NdpSeBank *bank, unsigned int effect);
 void ndp_se_stop(void);
 int ndp_se_is_playing(void);
+int ndp_stream_se_open(NdpStreamSeBank *bank, const void *data, size_t size);
+int ndp_stream_se_play(const NdpStreamSeBank *bank, unsigned int effect);
+void ndp_stream_se_stop(void);
+int ndp_stream_se_is_playing(void);
+void ndp_stream_se_set_master_volume(unsigned int attenuation);
 int ndp_is_playing(void);
 unsigned int ndp_loop_count(void);
 unsigned int ndp_end_tracks(void);
@@ -348,6 +359,16 @@ typedef struct NdpStreamState {
     uint8_t flags;
     volatile uint8_t active;
 } NdpStreamState;
+
+typedef struct NdpStreamSeState {
+    const uint8_t *data;
+    uint32_t size;
+    uint32_t frames_left;
+    uint32_t event_count;
+    uint32_t event_index;
+    uint16_t wait_frames;
+    volatile uint8_t active;
+} NdpStreamSeState;
 
 static NdpState ndp_s;
 
@@ -1288,6 +1309,7 @@ static int ndp_se_begin(const uint8_t *data, uint32_t size,
     priority = data[offset + 7U];
     if (priority > 7U) return 0;
     if (ndp_s.se_playing && priority > ndp_s.se_priority) return 0;
+    ndp_stream_se_stop();
     ndp_se_stop();
     ndp_stream_prepare_se();
     ndp_s.se_data = data;
@@ -1944,6 +1966,8 @@ static void ndp_stream_render_se_noise(unsigned int volume,
 }
 
 static NdpStreamState ndp_stream_s;
+static NdpStreamSeState ndp_stream_se_s;
+static uint8_t ndp_stream_se_master_volume;
 
 static uint16_t ndp_stream_be16(const uint8_t *p)
 {
@@ -1977,6 +2001,50 @@ static void ndp_stream_apply_master_volume(void)
                             ndp_stream_attenuate(
                                 ndp_stream_s.carrier_tl[slot]));
     }
+}
+
+static void ndp_stream_se_reset(void)
+{
+    ndp_stream_se_s.active = 0;
+    ndp_zero(&ndp_stream_se_s, sizeof(ndp_stream_se_s));
+}
+
+static uint8_t ndp_stream_se_attenuate(uint8_t value)
+{
+    unsigned int adjusted = value + ndp_stream_se_master_volume * 4U;
+    return (uint8_t)(adjusted > 127U ? 127U : adjusted);
+}
+
+static void ndp_stream_se_update_core(void)
+{
+    unsigned int processed = 0;
+    while (ndp_stream_se_s.active &&
+           ndp_stream_se_s.event_index < ndp_stream_se_s.event_count &&
+           ndp_stream_se_s.wait_frames == 0 &&
+           processed < NDP_STREAM_MAX_EVENTS_PER_UPDATE) {
+        uint32_t offset = 8U + ndp_stream_se_s.event_index * 4U;
+        uint8_t reg = ndp_stream_se_s.data[offset + 2];
+        uint8_t value = ndp_stream_se_s.data[offset + 3];
+        if (reg >= 0x70 && reg <= 0x7f && value < 0x80)
+            value = ndp_stream_se_attenuate(value);
+        ndp_opm_tracked(reg, value);
+        ++ndp_stream_se_s.event_index;
+        ++processed;
+        if (ndp_stream_se_s.event_index < ndp_stream_se_s.event_count) {
+            offset += 4U;
+            ndp_stream_se_s.wait_frames =
+                ndp_stream_be16(ndp_stream_se_s.data + offset);
+        }
+    }
+    if (!ndp_stream_se_s.active) return;
+    if (ndp_stream_se_s.wait_frames == 0 &&
+        ndp_stream_se_s.event_index < ndp_stream_se_s.event_count) return;
+    if (ndp_stream_se_s.wait_frames != 0)
+        --ndp_stream_se_s.wait_frames;
+    if (ndp_stream_se_s.frames_left != 0)
+        --ndp_stream_se_s.frames_left;
+    if (ndp_stream_se_s.frames_left == 0)
+        ndp_stream_se_stop();
 }
 
 static int ndp_stream_start_data(const void *data, size_t size)
@@ -2071,6 +2139,8 @@ int ndp_initialize(void)
     unsigned int ch;
     ndp_zero(&ndp_s, sizeof(ndp_s));
     ndp_stream_reset();
+    ndp_stream_se_reset();
+    ndp_stream_se_master_volume = 0;
     ndp_set_hard_period(0x0400U);
     ndp_zero(ndp_pitch_error, sizeof(ndp_pitch_error));
     ndp_zero(ndp_volume_error, sizeof(ndp_volume_error));
@@ -2190,6 +2260,7 @@ void ndp_stop(void)
 {
     unsigned int ch;
     ndp_stream_reset();
+    ndp_stream_se_stop();
     ndp_s.playing = 0;
     ndp_se_stop();
 #if NDP_PROFILE == NDP_PROFILE_STREAM
@@ -2317,12 +2388,14 @@ void ndp_update(void)
 #if NDP_PROFILE == NDP_PROFILE_STREAM
     unsigned int noise_volume = 0;
     unsigned int noise_frequency = 0;
-    if (!ndp_stream_s.active && !ndp_s.se_playing) return;
+    if (!ndp_stream_s.active && !ndp_s.se_playing &&
+        !ndp_stream_se_s.active) return;
     if (!ndp_update_fade_state()) return;
     if (ndp_stream_s.active) ndp_stream_update_core();
     if (ndp_s.se_playing)
         ndp_update_se(&noise_volume, &noise_frequency);
     ndp_stream_render_se_noise(noise_volume, noise_frequency);
+    if (ndp_stream_se_s.active) ndp_stream_se_update_core();
     ndp_emit_psg_frame();
     return;
 #else
@@ -2460,6 +2533,106 @@ void ndp_se_stop(void)
 int ndp_se_is_playing(void)
 {
     return ndp_s.se_playing != 0;
+}
+
+int ndp_stream_se_open(NdpStreamSeBank *bank, const void *data, size_t size)
+{
+    const uint8_t *bytes = (const uint8_t *)data;
+    unsigned int count;
+    unsigned int effect;
+    uint32_t table_end;
+    uint32_t previous;
+    if (bank == 0 || bytes == 0 || size < 16 || size > 0xffffffffUL)
+        return 0;
+    if (bytes[0] != 'N' || bytes[1] != 'D' ||
+        bytes[2] != 'S' || bytes[3] != 'S' || bytes[4] != 1) return 0;
+    count = bytes[5];
+    if (count == 0 || count > 99) return 0;
+    table_end = 8U + (uint32_t)(count + 1U) * 4U;
+    if (table_end > size) return 0;
+    previous = table_end;
+    for (effect = 0; effect <= count; ++effect) {
+        uint32_t offset = ndp_stream_be32(bytes + 8U + effect * 4U);
+        if (offset < previous || offset > size) return 0;
+        if (effect < count) {
+            uint32_t next = ndp_stream_be32(bytes + 12U + effect * 4U);
+            uint32_t frames;
+            uint32_t events;
+            if (offset < table_end || next < offset + 8U || next > size)
+                return 0;
+            frames = ndp_stream_be32(bytes + offset);
+            events = ndp_stream_be32(bytes + offset + 4U);
+            if (frames == 0 || events > (next - offset - 8U) / 4U)
+                return 0;
+        }
+        previous = offset;
+    }
+    bank->data = bytes;
+    bank->size = size;
+    bank->count = count;
+    return 1;
+}
+
+int ndp_stream_se_play(const NdpStreamSeBank *bank, unsigned int effect)
+{
+#if NDP_PROFILE == NDP_PROFILE_STREAM
+    const uint8_t *bytes;
+    uint32_t start;
+    uint32_t end;
+    uint32_t frames;
+    uint32_t events;
+    if (bank == 0 || bank->data == 0 || effect >= bank->count) return 0;
+    bytes = bank->data;
+    start = ndp_stream_be32(bytes + 8U + effect * 4U);
+    end = ndp_stream_be32(bytes + 12U + effect * 4U);
+    if (end < start + 8U || end > bank->size) return 0;
+    frames = ndp_stream_be32(bytes + start);
+    events = ndp_stream_be32(bytes + start + 4U);
+    if (frames == 0 || events > (end - start - 8U) / 4U) return 0;
+    ndp_se_stop();
+    ndp_stream_se_stop();
+    ndp_stream_se_s.data = bytes + start;
+    ndp_stream_se_s.size = end - start;
+    ndp_stream_se_s.frames_left = frames;
+    ndp_stream_se_s.event_count = events;
+    ndp_stream_se_s.event_index = 0;
+    ndp_stream_se_s.wait_frames =
+        events ? ndp_stream_be16(ndp_stream_se_s.data + 8) : 0;
+    ndp_stream_se_s.active = 1;
+    return 1;
+#else
+    (void)bank;
+    (void)effect;
+    return 0;
+#endif
+}
+
+void ndp_stream_se_stop(void)
+{
+#if NDP_PROFILE == NDP_PROFILE_STREAM
+    unsigned int channel;
+    ndp_stream_se_s.active = 0;
+    for (channel = NDP_STREAM_SE_CHANNEL_BASE;
+         channel < NDP_STREAM_SE_CHANNEL_BASE + 3U; ++channel)
+        ndp_opm_tracked(0x08, (uint8_t)channel);
+    ndp_opm_tracked(0x08, (uint8_t)NDP_STREAM_SE_NOISE_CHANNEL);
+    ndp_stream_se_reset();
+#endif
+}
+
+int ndp_stream_se_is_playing(void)
+{
+#if NDP_PROFILE == NDP_PROFILE_STREAM
+    return ndp_stream_se_s.active != 0;
+#else
+    return 0;
+#endif
+}
+
+void ndp_stream_se_set_master_volume(unsigned int attenuation)
+{
+    ndp_stream_se_master_volume =
+        (uint8_t)(attenuation > 15 ? 15 : attenuation);
 }
 
 int ndp_is_playing(void)

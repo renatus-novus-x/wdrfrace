@@ -25,6 +25,10 @@ COURSE_DATA := coursdat.h
 DEMO_DATA := demodat.h
 HERO_DATA := herodat.h
 FONT_DATA := telefont.h
+SE_MML := wdr_se.mml
+SE_DATA := wdrse.h
+SE_BINARY = $(BUILD_DIR)/wdrse.ndss
+SE_TOOL := ndpstreamse.py
 
 PYTHON ?= python3
 CURL ?= curl
@@ -64,6 +68,11 @@ gmdemo.o: $(DEMO_DATA)
 gmtitle.o: $(HERO_DATA)
 screen.o: $(FONT_DATA)
 bgm.o: bgmdata.h ndp.h $(wildcard bgmpriv.h) $(wildcard bgmstrm*.h)
+sound.o: $(SE_DATA) ndp.h
+
+$(SE_DATA): $(SE_MML) $(SE_TOOL) | $(BUILD_DIR)
+	$(PYTHON) $(SE_TOOL) $(SE_MML) --binary $(SE_BINARY) \
+		--header $@ --symbol wdr_stream_se_data
 
 $(FONT_DATA): mktele.py
 	$(PYTHON) $< > $@.tmp
@@ -111,6 +120,7 @@ distclean: clean
 	-rm -f $(INTRO_DATA) $(INTRO_DATA).tmp $(COURSE_DATA) $(COURSE_DATA).tmp
 	-rm -f $(DEMO_DATA) $(DEMO_DATA).tmp
 	-rm -f $(HERO_DATA) $(HERO_DATA).tmp titldat.h titldat.h.tmp
+	-rm -f $(SE_DATA)
 
 -include $(DEPS)
 
